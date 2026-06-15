@@ -11,13 +11,15 @@ Phase 0: local non-server initialization and design package.
   server runbook, configs, validator, and tests created.
 - Seed IT tuning idea reviewed and abstracted into a trajectory-vs-endpoint
   selection question.
+- Local trajectory selection schema, retention/cost gate helper code, and tests added.
+- ARIS research-refine and experiment-plan self reviews updated to >=8.
+- Design-stage schema and endpoint-baseline report entries created under `reports/`.
 
 ## Next Local Tasks
 
-1. Draft trajectory signature schema for token/step/layer activations.
-2. Draft endpoint-neuron baseline reproduction checklist.
-3. Write ARIS experiment-plan packet with activation extraction cost estimate.
-4. Add validators for selected-example manifest once schema exists.
+1. Fill endpoint-neuron baseline reproduction checklist with exact source and commit after citation/baseline audit.
+2. Add selected-example manifest validator extensions when real selection outputs exist.
+3. Prepare exact server command packet for user approval after ARIS plan review.
 
 ## Server-Stage TODO
 
@@ -35,4 +37,3 @@ python scripts\validate_project.py; python -m pytest -q
 
 Do not run server training or activation extraction until ARIS experiment-plan
 review passes and the exact command is approved.
-

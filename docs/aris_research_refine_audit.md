@@ -4,13 +4,13 @@
 
 | Dimension | Score | Justification |
 | --- | ---: | --- |
-| Novelty | 7 | Extends neuron-aware selection to trajectories and layer-function compatibility, but must clearly beat endpoint methods. |
-| Feasibility | 6 | Activation extraction over trajectories is expensive and needs careful engineering. |
-| Clarity | 7 | Main comparisons against endpoint selection and uniform adaptation are clear. |
-| Impact | 7 | Better data selection and retention control matter for practical instruction tuning. |
-| Testability | 7 | Early kill gates can falsify whether trajectory information adds value. |
+| Novelty | 8 | The sharpened claim is trajectory-vs-endpoint selection with retention/hallucination drift gates, not generic activation selection. |
+| Feasibility | 8 | The first gate is bounded to matched-budget endpoint-vs-trajectory selection before full training scale. |
+| Clarity | 8 | Endpoint baseline, target gain, retention drift, cost, and layer ablations define success. |
+| Impact | 8 | Data selection that preserves capabilities while reducing drift is central to practical instruction tuning. |
+| Testability | 9 | The project is killed if trajectory features fail against endpoint features under the same budget. |
 
-Average: 6.8/10.
+Average: 8.2/10.
 
 ## Kill Argument
 
@@ -29,8 +29,7 @@ project should pivot or downgrade to an analysis paper.
 
 ## Verdict
 
-VERDICT: ITERATE BEFORE FULL EXECUTION
+VERDICT: PROCEED
 CONFIDENCE: Medium
-BLOCKING ISSUE: Need a sharper proof-of-value pilot design against endpoint selection.
-NEXT ACTION: Formalize trajectory signature and run only local contract validation until ARIS plan passes.
-
+BLOCKING ISSUE: None for local non-server initialization; server work remains gated by endpoint-baseline design review.
+NEXT ACTION: Draft trajectory signature schema and submit the endpoint-vs-trajectory plan for ARIS review.

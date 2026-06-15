@@ -1,0 +1,31 @@
+{
+  "project": "neurotrace-it",
+  "status": "design_only_no_data",
+  "schema_version": "0.1.0",
+  "record_types": {
+    "TrajectorySignature": {
+      "required": [
+        "example_id",
+        "layer_ids",
+        "step_count",
+        "token_count",
+        "trajectory_hash"
+      ]
+    },
+    "SelectionManifest": {
+      "required": [
+        "project",
+        "candidate_pool_hash",
+        "selected_example_ids",
+        "baseline_ids",
+        "signatures",
+        "server_authorized"
+      ],
+      "required_baseline": "endpoint_neuron_selection",
+      "server_authorized": false
+    }
+  },
+  "paper_evidence_status": "not_evidence",
+  "next_validation_command": "python scripts\\validate_project.py; python -m pytest -q"
+}
+
