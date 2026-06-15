@@ -39,3 +39,9 @@ Paper-facing evidence requires:
 
 Smoke tests in this repository are only contract tests.
 
+## Current Status
+
+The non-server initialization package is complete for handoff: see
+`docs/active_todo.md`, `docs/milestones.md`, `docs/paper_claims_status.md`,
+and `docs/definition_of_done.md`. The next real gate is ARIS experiment-plan
+review of the trajectory-signature and endpoint-baseline comparison design.
