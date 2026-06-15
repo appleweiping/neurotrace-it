@@ -1,0 +1,41 @@
+project: neurotrace-it
+status: design_only
+run_tier: paper_candidate
+claim: trajectory-level activation data selection improves IT with lower drift
+datasets:
+  - math_instruction_pool
+  - code_instruction_pool
+  - multi_hop_qa_instruction_pool
+  - general_retention_eval
+  - factuality_drift_eval
+baselines:
+  - random_subset
+  - full_data_it
+  - quality_score_selection
+  - diversity_coreset
+  - influence_gradient_selection
+  - endpoint_neuron_selection
+  - layer_selective_no_trajectory
+seeds:
+  paper_minimum: 20
+metrics:
+  target:
+    - exact_match
+    - pass_rate
+  retention:
+    - aggregate_retention_score
+    - semantic_drift
+  hallucination:
+    - factuality_error_rate
+    - harmful_overconfidence_rate
+  efficiency:
+    - selection_cost_hours
+    - training_cost_hours
+gates:
+  target_or_adjusted_relative_gain: 0.03
+  max_retention_drift_abs: 0.01
+  max_selection_cost_multiplier: 2.0
+server:
+  authorized: false
+  reason: ARIS design review not complete
+

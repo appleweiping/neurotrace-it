@@ -1,0 +1,24 @@
+project: neurotrace-it
+baselines:
+  random_subset:
+    family: sanity
+    required: true
+  full_data_it:
+    family: data_budget
+    required: true
+  quality_score_selection:
+    family: data_quality
+    required: true
+  diversity_coreset:
+    family: coreset
+    required: true
+  influence_gradient_selection:
+    family: influence
+    required: true
+  endpoint_neuron_selection:
+    family: neuron_activation
+    required: true
+  layer_selective_no_trajectory:
+    family: layer_policy
+    required: true
+
