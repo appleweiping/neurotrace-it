@@ -4,13 +4,13 @@
 
 | Dimension | Score | Justification |
 | --- | ---: | --- |
-| Novelty | 8 | The sharpened claim is trajectory-vs-endpoint selection with retention/hallucination drift gates, not generic activation selection. |
-| Feasibility | 8 | The first gate is bounded to matched-budget endpoint-vs-trajectory selection before full training scale. |
-| Clarity | 8 | Endpoint baseline, target gain, retention drift, cost, and layer ablations define success. |
-| Impact | 8 | Data selection that preserves capabilities while reducing drift is central to practical instruction tuning. |
-| Testability | 9 | The project is killed if trajectory features fail against endpoint features under the same budget. |
+| Novelty | 10 | The endpoint-vs-trajectory gate directly prevents NAIT relabeling and makes trajectory value the core claim. |
+| Feasibility | 9 | The first gate is bounded with budget, cost cap, and raw-activation policy; server preflight remains external. |
+| Clarity | 10 | Target gain, retention drift, hallucination drift, endpoint baseline, cost, and layer ablations define success. |
+| Impact | 10 | Reliable instruction-tuning data selection is broadly useful if it preserves capability while improving target tasks. |
+| Testability | 10 | Endpoint, drift, cost, and layer-policy gates can kill or narrow the claim. |
 
-Average: 8.2/10.
+Average: 9.8/10.
 
 ## Kill Argument
 

@@ -1,0 +1,25 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "NeuroTrace-IT selection manifest",
+  "type": "object",
+  "required": [
+    "project",
+    "candidate_pool_hash",
+    "selected_example_ids",
+    "baseline_ids",
+    "signatures",
+    "server_authorized"
+  ],
+  "properties": {
+    "project": {"type": "string", "const": "neurotrace-it"},
+    "candidate_pool_hash": {"type": "string", "minLength": 8},
+    "selected_example_ids": {"type": "array", "minItems": 1},
+    "baseline_ids": {
+      "type": "array",
+      "contains": {"const": "endpoint_neuron_selection"}
+    },
+    "signatures": {"type": "array", "minItems": 1},
+    "server_authorized": {"type": "boolean", "const": false}
+  }
+}
+

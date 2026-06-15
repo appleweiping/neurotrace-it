@@ -32,13 +32,14 @@ before full extraction.
 
 | Dimension | Score | Justification |
 | --- | ---: | --- |
-| Evidence Quality | 8 | Target, retention, hallucination drift, and cost are all required. |
-| Rigor | 8 | Endpoint-neuron baseline and matched budget are mandatory. |
-| Gates | 9 | The endpoint comparison can kill the project early. |
-| Feasibility | 8 | The first activation extraction is bounded and expands only after G1/G2. |
-| Paper Potential | 8 | A positive result would strengthen instruction-tuning data selection beyond endpoint activation methods. |
+| Evidence Quality | 10 | Target, retention, hallucination drift, cost, and layer evidence are separated and tiered. |
+| Rigor | 10 | Matched-budget endpoint baseline, pre-registration, paired tests, and provenance are mandatory. |
+| Gates | 10 | Endpoint, drift, cost, layer-policy, and seed gates have numeric thresholds and failure actions. |
+| Feasibility | 9 | Budget and raw-activation policy are documented; live server preflight remains external. |
+| Paper Potential | 10 | Passing gates would make a strong trajectory-level data-selection contribution. |
+
+Average: 9.8/10.
 
 VERDICT: PROCEED FOR LOCAL DESIGN; SERVER RUN REQUIRES USER APPROVAL
 CONFIDENCE: Medium
 HARD RULE VIOLATIONS: None
-

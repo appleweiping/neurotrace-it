@@ -1,0 +1,63 @@
+project: neurotrace-it
+run_tier: first_gate_design
+status: no_server_run_authorized
+candidate_pool:
+  id: math_code_multihop_instruction_pool_first_gate
+  split_policy: frozen_train_valid_test_hash_required_before_run
+  contamination_leakage_audit: required_before_run
+base_model:
+  id: first_gate_open_model_pending_user_approval
+  tuning_method: lora
+  training_budget: matched_steps_tokens_and_rank
+activation_extraction:
+  layers: fixed_validation_selected_layer_grid
+  temporal_resolution: prompt_answer_generation_steps
+  endpoint_features: final_step_neuron_activation_similarity
+  trajectory_features: normalized_layer_step_signature
+seeds:
+  manifest: configs/seeds/paper_20.txt
+  strategy: sequential_0_to_19_shared_by_all_methods
+baselines:
+  required:
+    - random_subset
+    - quality_score_selection
+    - diversity_coreset
+    - influence_gradient_selection
+    - endpoint_neuron_selection
+    - layer_selective_no_trajectory
+metrics:
+  target:
+    - exact_match
+    - pass_rate
+  retention:
+    - aggregate_retention_score
+    - semantic_drift
+  hallucination:
+    - factuality_error_rate
+    - harmful_overconfidence_rate
+  cost:
+    - selection_cost_hours
+    - training_cost_hours
+gates:
+  trajectory_endpoint_margin:
+    metric: trajectory_adjusted_score_minus_endpoint_adjusted_score
+    threshold: 0.02
+    failure_action: stop_main_novelty_claim
+  target_or_adjusted_relative_gain:
+    metric: target_score_or_retention_adjusted_score
+    threshold: 0.03
+    failure_action: downgrade_to_diagnostic
+  max_retention_drift_abs:
+    metric: aggregate_retention_score_drop
+    threshold: 0.01
+    failure_action: forbid_reliability_claim
+  max_hallucination_drift_abs:
+    metric: factuality_error_rate_increase
+    threshold: 0.01
+    failure_action: forbid_safety_claim
+  max_selection_cost_multiplier:
+    metric: selection_cost_vs_endpoint_neuron_selection
+    threshold: 2.0
+    failure_action: require_efficiency_ablation
+server:
+  authorized: false

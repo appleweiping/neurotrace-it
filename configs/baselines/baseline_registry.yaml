@@ -3,22 +3,64 @@ baselines:
   random_subset:
     family: sanity
     required: true
+    paper_url: local_sanity_baseline
+    implementation_source: local
+    license: project_license
+    tuning_policy: validation_only_same_budget
+    input_access: candidate_example_ids_only
+    fairness: same_pool_same_budget_same_training_and_evaluator
   full_data_it:
     family: data_budget
     required: true
+    paper_url: local_upper_bound_reference
+    implementation_source: local
+    license: project_license
+    tuning_policy: matched_training_budget_or_reported_as_upper_bound
+    input_access: full_candidate_pool
+    fairness: reported_as_upper_bound_not_matched_budget_claim
   quality_score_selection:
     family: data_quality
     required: true
+    paper_url: citation_required_before_server_run
+    implementation_source: documented_quality_filter
+    license: verify_before_run
+    tuning_policy: validation_only_same_budget
+    input_access: prompt_response_quality_scores
+    fairness: same_pool_same_budget_same_training_and_evaluator
   diversity_coreset:
     family: coreset
     required: true
+    paper_url: https://arxiv.org/abs/2605.26004
+    implementation_source: documented_coreset_selector
+    license: verify_before_run
+    tuning_policy: validation_only_same_budget
+    input_access: candidate_embeddings
+    fairness: same_pool_same_budget_same_training_and_evaluator
   influence_gradient_selection:
     family: influence
     required: true
+    paper_url: citation_required_before_server_run
+    implementation_source: cited_or_faithful_reimplementation
+    license: verify_before_run
+    tuning_policy: validation_only_same_budget
+    input_access: gradients_or_influence_scores
+    fairness: same_pool_same_budget_same_training_and_evaluator
   endpoint_neuron_selection:
+    display_name: NAIT-style endpoint-neuron baseline
     family: neuron_activation
     required: true
+    paper_url: https://arxiv.org/abs/2603.13201
+    implementation_source: nait_style_or_faithful_endpoint_reimplementation
+    license: verify_before_run
+    tuning_policy: validation_only_same_budget
+    input_access: endpoint_neuron_activation_similarity
+    fairness: same_pool_same_budget_same_training_and_evaluator
   layer_selective_no_trajectory:
     family: layer_policy
     required: true
-
+    paper_url: local_ablation
+    implementation_source: local_ablation
+    license: project_license
+    tuning_policy: validation_only_same_budget
+    input_access: selected_layers_without_temporal_trajectory
+    fairness: same_pool_same_budget_same_training_and_evaluator

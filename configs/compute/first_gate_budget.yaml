@@ -1,0 +1,20 @@
+project: neurotrace-it
+run_tier: first_gate
+buffer_percent: 30
+resources:
+  activation_extraction_gpu_hours: 12
+  endpoint_selection_gpu_or_cpu_hours: 2
+  trajectory_selection_gpu_or_cpu_hours: 4
+  matched_lora_training_gpu_hours: 24
+  storage_gb: 500
+  wall_clock_hours: 72
+preflight_required:
+  - gpu_available
+  - output_dir_empty_or_resumable
+  - disk_free_gb_at_least_650
+  - raw_activation_cleanup_policy_confirmed
+stop_conditions:
+  - trajectory_gain_below_0_03
+  - retention_drift_above_0_01
+  - cost_multiplier_above_2_0
+

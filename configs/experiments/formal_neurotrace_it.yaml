@@ -33,9 +33,11 @@ metrics:
     - training_cost_hours
 gates:
   target_or_adjusted_relative_gain: 0.03
+  trajectory_endpoint_relative_gain: 0.02
   max_retention_drift_abs: 0.01
+  max_hallucination_drift_abs: 0.01
   max_selection_cost_multiplier: 2.0
+  endpoint_baseline_required: true
 server:
   authorized: false
   reason: ARIS design review not complete
-
