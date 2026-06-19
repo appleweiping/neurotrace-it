@@ -21,37 +21,85 @@ baselines:
   quality_score_selection:
     family: data_quality
     required: true
-    paper_url: citation_required_before_server_run
-    implementation_source: documented_quality_filter
-    license: verify_before_run
+    # CITATION PINNED (verified 2026-06-19, WebSearch): the quality-score anchor is
+    # AlpaGasus (Chen et al., ICLR 2024) -- LLM-as-judge per-example quality scoring
+    # that filters low-quality instruction tuples. Real, checkable paper.
+    paper_url: https://arxiv.org/abs/2307.08701
+    paper_venue: ICLR 2024
+    paper_repo: https://github.com/Lichang-Chen/AlpaGasus
+    citation_status: verified_real_2026-06-19
+    must_beat: true
+    implementation_source: documented_quality_filter_faithful_reimpl_of_alpagasus_scoring
+    # License: our baseline is a faithful reimplementation of the AlpaGasus LLM-as-judge
+    # SCORING METHOD run under this project's own license; the AlpaGasus model artifacts
+    # are LLaMA-derived (non-commercial) and are NOT loaded -- only the documented scoring
+    # procedure is reused, so no upstream model license attaches to our run.
+    license: project_license_reimpl_of_alpagasus_scoring
     tuning_policy: validation_only_same_budget
     input_access: prompt_response_quality_scores
     fairness: same_pool_same_budget_same_training_and_evaluator
   diversity_coreset:
     family: coreset
     required: true
-    paper_url: https://arxiv.org/abs/2605.26004
+    paper_url: local_documented_coreset_selector
+    # RE-CHARACTERIZATION (2026-06-19): arXiv:2605.26004 is a REAL paper, but it is
+    # "MAGIC: Multimodal Alignment & Grounding-aware Instruction Coreset for
+    # Vision-Language Models" -- a MULTIMODAL / VLM coreset method, NOT a text
+    # instruction-tuning coreset anchor. It is therefore NOT an apples-to-apples
+    # must-beat baseline for this text-only LATTICE-R setting and is removed as the
+    # must-beat paper_url. diversity_coreset stays a NON-must-beat secondary/contextual
+    # baseline run via a documented text-coreset selector (e.g. a k-center / facility-
+    # location selector over candidate embeddings). No "beats diversity_coreset" claim
+    # is licensed. If a verified TEXT-domain coreset citation is adopted at run
+    # authorization, pin its exact id/revision/hash there.
+    related_multimodal_paper: "https://arxiv.org/abs/2605.26004 (MAGIC, VLM coreset; out-of-domain reference only)"
+    citation_status: text_anchor_absent_multimodal_paper_recharacterized_2026-06-19
+    role: contextual_non_must_beat   # CONTEXTUAL secondary baseline, NOT a must-beat anchor
+    must_beat: false
     implementation_source: documented_coreset_selector
-    license: verify_before_run
+    # License RESOLVED (2026-06-19): this is OUR OWN documented text-coreset selector
+    # (k-center / facility-location over candidate embeddings); no external artifact or
+    # the MAGIC/VLM codebase is loaded, so it runs under this project's own license.
+    license: project_license_local_text_coreset_selector
     tuning_policy: validation_only_same_budget
     input_access: candidate_embeddings
     fairness: same_pool_same_budget_same_training_and_evaluator
   influence_gradient_selection:
     family: influence
     required: true
-    paper_url: citation_required_before_server_run
-    implementation_source: cited_or_faithful_reimplementation
-    license: verify_before_run
+    # CITATION PINNED (verified 2026-06-19, WebSearch): the influence/gradient anchor is
+    # LESS (Xia et al., ICML 2024) -- optimizer-aware low-rank gradient-similarity
+    # influence selection for targeted instruction tuning. Real, checkable paper.
+    paper_url: https://arxiv.org/abs/2402.04333
+    paper_venue: ICML 2024
+    paper_repo: https://github.com/princeton-nlp/LESS
+    # Upstream LESS code is MIT-licensed (verified 2026-06-19), so a faithful
+    # reimplementation or adaptation is license-clean for our run.
+    license: MIT_upstream_less_repo
+    citation_status: verified_real_2026-06-19
+    must_beat: true
+    implementation_source: cited_or_faithful_reimplementation_of_less
     tuning_policy: validation_only_same_budget
     input_access: gradients_or_influence_scores
     fairness: same_pool_same_budget_same_training_and_evaluator
   endpoint_neuron_selection:
-    display_name: NAIT-style endpoint-neuron baseline
+    display_name: NAIT endpoint-neuron baseline
     family: neuron_activation
     required: true
     paper_url: https://arxiv.org/abs/2603.13201
-    implementation_source: nait_style_or_faithful_endpoint_reimplementation
-    license: verify_before_run
+    paper_url_openreview: https://openreview.net/forum?id=uq6UWRgzMr
+    # fix f3 correction: NAIT 2603.13201 is a REAL, checkable paper (OpenReview,
+    # verified 2026-06-19). It is NOT a future-dated/invalid placeholder; it is a
+    # must-beat baseline. "beats NAIT" wording is gated on fair-comparison results.
+    citation_status: verified_real_2026-06-19
+    must_beat: true
+    implementation_source: faithful_endpoint_reimplementation_of_nait_eq1
+    # License RESOLVED (2026-06-19): our comparator is a FAITHFUL REIMPLEMENTATION of
+    # NAIT Eq.1 from the published paper (arXiv 2603.13201 / OpenReview), written from
+    # the equations; no NAIT artifact or upstream codebase is loaded, so it runs under
+    # this project's own license. If an upstream NAIT release is adopted at run
+    # authorization, pin its exact license/revision here.
+    license: project_license_reimpl_of_nait_eq1
     tuning_policy: validation_only_same_budget
     input_access: endpoint_neuron_activation_similarity
     fairness: same_pool_same_budget_same_training_and_evaluator

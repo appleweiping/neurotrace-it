@@ -1,0 +1,222 @@
+# NeuroTrace-IT LATTICE-R v5 -- queue manifest (BUILD-NOW / RUN-LATER)
+#
+# Ordered, restartable cell DAG for the full REDESIGN_v5 pipeline. NOTHING runs from
+# this file now: every cell is gated by the SAME hard guard as the entrypoints
+# (server.authorized==true AND --i-have-authorization). The committed
+# configs/experiments/lattice_v5.yaml has server.authorized: false, so an external
+# runner that honours `guard` MUST stay in dry-run. Zero fabricated numbers; every
+# ${...} is defined in reports/run_packet.md Section 0.
+
+project: neurotrace-it
+run_tier: lattice_v5_run_packet
+status: no_server_run_authorized
+design_ref: docs/redesign/REDESIGN_v5.md
+
+# --- global guard (mirrors scripts/_run_guard.py) ------------------------------
+guard:
+  requires_all:
+    - config_key: server.authorized          # configs/experiments/lattice_v5.yaml
+      equals: true
+    - cli_flag: --i-have-authorization
+  default_behavior: dry_run_print_plan_json_exit_0
+  loads_model_in_dry_run: false
+  loads_gpu_in_dry_run: false
+
+server:
+  authorized: false
+
+# --- frozen inputs (read-only) -------------------------------------------------
+frozen_configs:
+  v5_routing: configs/experiments/lattice_v5.yaml
+  v4_models_datasets: configs/experiments/lattice_v4.yaml
+  compute_budget: configs/compute/first_gate_budget.yaml
+  seeds: configs/seeds/paper_20.txt          # exactly 0..19
+
+# --- PRIMARY CONFIRMATORY CELLS (named identically to the paper + closed_testing) --
+primary_confirmatory_cells: [R0, R1, G2t, G2r, G2h, G2c]
+
+# --- shared run conventions ----------------------------------------------------
+defaults:
+  runs_root: runs
+  status_file: STATUS.json                    # {completed[], pending[], plan_hash, server_authorized:false}
+  resume_flag: --resume
+  authorize_flag: --i-have-authorization
+
+# --- cell DAG (idempotent / restartable) ---------------------------------------
+# Each cell: a ONE-COMMAND entrypoint, its dependency, its idempotency contract, and
+# the STATUS.json stages it records. `command` shown WITHOUT --i-have-authorization
+# (i.e. as a safe dry run); appending the flag is the authorized-run action.
+cells:
+
+  - id: extract_signatures
+    phase: B-1
+    entrypoint: scripts/extract_signatures.py
+    depends_on: []
+    idempotent: true
+    restartable: true
+    run_dir: runs/extract_signatures
+    command: >-
+      python scripts/extract_signatures.py
+      --config configs/experiments/lattice_v5.yaml
+      --run-dir runs/extract_signatures
+    resume_command: >-
+      python scripts/extract_signatures.py
+      --config configs/experiments/lattice_v5.yaml
+      --run-dir runs/extract_signatures --resume
+    stages: [nait_directions_L, nait_scores_proj, trajectory_signatures_train,
+             trajectory_signatures_val, trajectory_signatures_dep]
+    firewall: P_dep reads activations only
+    primary_cell: false
+
+  - id: run_nait_baseline
+    phase: B-0
+    entrypoint: scripts/run_nait_baseline.py
+    depends_on: [extract_signatures]
+    idempotent: true
+    restartable: true
+    run_dir: runs/run_nait_baseline
+    command: >-
+      python scripts/run_nait_baseline.py
+      --config configs/experiments/lattice_v5.yaml
+      --run-dir runs/run_nait_baseline
+    resume_command: >-
+      python scripts/run_nait_baseline.py
+      --config configs/experiments/lattice_v5.yaml
+      --run-dir runs/run_nait_baseline --resume
+    stages: [fit_directions_L_alg1, fit_directions_L_token_mean, score_layerwise_L,
+             select_topk_B, anchor_secondary_gated, endpoint_control_distinctness]
+    comparator_rule: stronger_full_L_variant
+    primary_cell: false
+
+  - id: run_r0_analysis
+    phase: B-2
+    entrypoint: scripts/run_r0_analysis.py
+    depends_on: [extract_signatures, run_nait_baseline]
+    idempotent: true
+    restartable: true
+    run_dir: runs/run_r0_analysis
+    command: >-
+      python scripts/run_r0_analysis.py
+      --config configs/experiments/lattice_v5.yaml
+      --run-dir runs/run_r0_analysis
+    resume_command: >-
+      python scripts/run_r0_analysis.py
+      --config configs/experiments/lattice_v5.yaml
+      --run-dir runs/run_r0_analysis --resume
+    stages: [build_control_rows_Z, fit_frozen_nuisance_maps, residualize_out_of_sample,
+             dual_ridge_partial_r2, block_permutation_test, bca_bootstrap_ci, decide_gate_r0]
+    primary_cell: true
+    cell_name: R0
+    closed_testing_node: G0
+    failure_action: stop_main_novelty_claim
+
+  - id: run_r1_routing
+    phase: B-3
+    entrypoint: scripts/run_r1_routing.py
+    depends_on: [extract_signatures, run_r0_analysis]
+    idempotent: true
+    restartable: true
+    run_dir: runs/run_r1_routing
+    command: >-
+      python scripts/run_r1_routing.py
+      --config configs/experiments/lattice_v5.yaml
+      --run-dir runs/run_r1_routing
+    resume_command: >-
+      python scripts/run_r1_routing.py
+      --config configs/experiments/lattice_v5.yaml
+      --run-dir runs/run_r1_routing --resume
+    arms: [psi, unif, shuf, rand, global, ada]
+    controls: [unif, shuf, rand, global, ada]
+    seeds_file: configs/seeds/paper_20.txt
+    # idempotent (arm, seed) training cells: recorded only after checkpoint + U_train
+    # are durably written, so --resume skips finished arms.
+    stage_template:
+      once_before_arms: [ada_warmup_seed_outside_V]   # frozen under seed_ada, OUTSIDE V(pi)
+      per_seed_per_arm: "train::{arm}::seed{seed}"
+      analysis: [validate_J_profile, policy_value_seed_means, paired_gaps,
+                 bootstrap_t_lower_bounds, iut_decision_R1]
+    decision: intersection_union_test         # reject iff every L_c(alpha) > delta_R1
+    primary_cell: true
+    cell_name: R1
+    closed_testing_node: G1
+    failure_action: drop_routing_keep_selection
+
+  - id: run_r2_matched_budget
+    phase: B-4
+    entrypoint: scripts/run_r2_matched_budget.py
+    depends_on: [extract_signatures, run_nait_baseline, run_r1_routing]
+    idempotent: true
+    restartable: true
+    run_dir: runs/run_r2_matched_budget
+    command: >-
+      python scripts/run_r2_matched_budget.py
+      --config configs/experiments/lattice_v5.yaml
+      --run-dir runs/run_r2_matched_budget
+    resume_command: >-
+      python scripts/run_r2_matched_budget.py
+      --config configs/experiments/lattice_v5.yaml
+      --run-dir runs/run_r2_matched_budget --resume
+    stages: [select_greedy_F_on_dep, route_pi_psi_on_S, train_lattice_r,
+             train_stronger_nait_L, train_baselines, compute_match_ledger,
+             assert_capacity_matched, g2t_target_iut, g2r_retention_margin,
+             g2h_hallucination_margin, g2c_cost_margin]
+    primary_cell: true
+    cell_name: [G2t, G2r, G2h, G2c]
+    closed_testing_node: [G2t, G2r, G2h, G2c]
+    failure_action: no_method_win_claim
+
+  - id: eval_gates
+    phase: B-5
+    entrypoint: scripts/eval_gates.py
+    depends_on: [run_r0_analysis, run_r1_routing, run_r2_matched_budget]
+    idempotent: true
+    restartable: true
+    run_dir: runs/eval_gates
+    command: >-
+      python scripts/eval_gates.py
+      --config configs/experiments/lattice_v5.yaml
+      --run-dir runs/eval_gates
+    resume_command: >-
+      python scripts/eval_gates.py
+      --config configs/experiments/lattice_v5.yaml
+      --run-dir runs/eval_gates --resume
+    consumes:
+      r0: runs/run_r0_analysis/r0_partial_r2.json
+      r1: runs/run_r1_routing/r1_iut.json
+      r2: runs/run_r2_matched_budget/r2_result.json
+    stages: [load_r0_r1_r2_artifacts, build_closed_test_inputs, closed_test_shortcut,
+             assert_shortcut_equals_bruteforce, fwer_report, cost_ledger_r3,
+             preconditions_g6_g7_jval]
+    primary_cell: false
+    emits: closed_testing_decision_FWER_le_0_05
+
+# --- pinned multiplicity structure (mirrors lattice_v5.yaml closed_testing) -----
+closed_testing:
+  alpha: 0.05
+  w_0: 1.00
+  edges:
+    - {from: G0, to: G1, weight: 1.0}
+    - {from: G1, to: G2t, weight: 1.0}
+  split: {w_r: 0.34, w_h: 0.33, w_c: 0.33}
+  recycle: 1.0
+  union_null_leaves:
+    R1: {components: 5, rule: full_union_iut}
+    G2t: {components: baseline_set, rule: full_union_iut}
+
+# --- compute budget envelope (frozen; first_gate_budget.yaml) -------------------
+# Budget envelope only; realized FLOPs/wall-clock are MEASURED by
+# cost_model.compute_match_ledger at run authorization (never fabricated here).
+compute_budget_envelope:
+  buffer_percent: 30
+  activation_extraction_gpu_hours: 12
+  endpoint_selection_gpu_or_cpu_hours: 2
+  trajectory_selection_gpu_or_cpu_hours: 4
+  matched_lora_training_gpu_hours: 24        # 6 arms x 20 seeds (R1) AND R2 comparison
+  storage_gb: 500
+  wall_clock_hours: 72
+  six_arm_note: all arms share r_0, R_tot, capacity_match; match reduces to anchor-A allocation
+  preflight_required:
+    - gpu_available
+    - output_dir_empty_or_resumable
+    - disk_free_gb_at_least_650
+    - raw_activation_cleanup_policy_confirmed

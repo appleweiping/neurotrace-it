@@ -2,8 +2,9 @@
 
 ## Source Ideas Read
 
-The seed idea came from the instruction-tuning note in
-`D:\devtools\scratch\codex-hallucination-directions-20260615`. It proposed:
+The seed idea came from an external instruction-tuning scratch note (kept outside
+this repository; its absolute path is intentionally omitted for anonymized-review
+hygiene). It proposed:
 
 - neuron-aware data selection should consider reasoning trajectories, not only
   start/end token activations;

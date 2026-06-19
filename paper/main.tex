@@ -1,0 +1,1105 @@
+% =====================================================================
+% NeuroTrace-IT / LATTICE-R
+% Stage-1 Registered Report (BUILD-NOW / RUN-LATER).
+%
+% DO NOT COMPILE on the build server as an experiment: this is a
+% well-formed .tex written for deferred compilation. server.authorized
+% stays FALSE; NO experiment, training, GPU job, extraction, or model
+% load is run. Every results table/figure is a DATA_NEEDED placeholder
+% describing what WILL be reported after the pre-registered, authorized
+% run. No empirical numbers are fabricated, and no arXiv identifier is
+% invented (citation hygiene: see references.bib).
+%
+% Implementation status (kept consistent with REDESIGN_v5.md and
+% run_packet.md): the v5 LATTICE-R modules ARE implemented in
+% src/neurotrace_it/ as additive, do-not-run, pure-Python (stdlib only;
+% no model load, no server call, no training). They are exercised by a
+% GREEN unit harness of 93 passing formula-evaluation tests across six
+% test files (see Sec.~\ref{sec:setup}). These are CODE-CORRECTNESS
+% checks, NOT evidence.
+%
+% Self-contained, standard single-column conference article style
+% (article class) so it compiles without a venue style file when
+% authorized.
+% =====================================================================
+\documentclass[11pt]{article}
+
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{amsmath,amssymb,amsthm}
+\usepackage{bm}
+\usepackage{booktabs}
+\usepackage{array}
+\usepackage{graphicx}
+\usepackage{xcolor}
+\usepackage{enumitem}
+\usepackage[margin=1in]{geometry}
+\usepackage{hyperref}
+\hypersetup{colorlinks=true,linkcolor=blue,citecolor=blue,urlcolor=blue}
+
+% ---- theorem environments ----
+\newtheorem{theorem}{Theorem}
+\newtheorem{proposition}{Proposition}
+\newtheorem{lemma}{Lemma}
+\newtheorem{corollary}{Corollary}
+\theoremstyle{definition}
+\newtheorem{definition}{Definition}
+\newtheorem{assumption}{Assumption}
+
+% ---- macros ----
+\newcommand{\phend}{\bm{\phi}_{\mathrm{end}}}
+\newcommand{\Tmat}{\mathbf{T}}
+\newcommand{\Ttil}{\widetilde{\mathbf{T}}}
+\newcommand{\Zmat}{\mathbf{Z}}
+\newcommand{\Blam}{\mathbf{B}_{\lambda}}
+\newcommand{\R}{\mathbb{R}}
+\newcommand{\E}{\mathbb{E}}
+\newcommand{\sw}{\mathrm{SW}_2^2}
+\newcommand{\Aset}{\mathcal{A}}
+\newcommand{\Lset}{\mathcal{L}}
+\newcommand{\psivec}{\bm{\psi}}
+\newcommand{\Utr}{U_{\mathrm{train}}}
+\newcommand{\Vpol}{V}
+\newcommand{\Rtot}{R_{\mathrm{tot}}}
+\newcommand{\rmax}{r_{\max}}
+\newcommand{\dataneeded}[1]{\textcolor{red}{\textbf{[DATA\_NEEDED]}}~\emph{#1}}
+
+\title{\textbf{LATTICE-R}: Trajectory-Aware, Layer-Routed\\
+Instruction-Tuning Data Selection from One Residualized Attribution,\\
+Certified by an Interventional Routing Test\\
+\large A Stage-1 Registered Report}
+
+\author{Anonymous Authors\\\small (under double-blind review)}
+\date{}
+
+\begin{document}
+\maketitle
+
+\begin{abstract}
+Neuron-aware instruction-tuning data selection (NAIT) scores a candidate example by
+collapsing its decoder-layer activations to a per-layer principal direction, summing
+the layer projections into a single scalar, and selecting the top-$k$. That sum
+discards \emph{which} layer carried the evidence and tunes every layer uniformly. We
+ask whether the per-layer axis NAIT already computes can be turned into a
+\emph{decision variable} that drives both \emph{which} examples to keep \emph{and}
+\emph{where} each example's gradient should land---and whether doing so beats NAIT at a
+compute-matched budget. \textbf{LATTICE-R} derives, from one per-example
+endpoint+NAIT-residualized trajectory attribution $\psivec(x)\in\R^{|\Aset|}$, two
+coupled readouts: the data-selection score is the \emph{sum} $\sum_{\ell\in\Aset}
+\psi_\ell(x)$ and the LoRA layer-routing policy is the \emph{support}
+$\mathrm{supp}(\psivec(x))$, tied by the exact identity $\sum_{\ell\in\Aset}\psi_\ell(x)
+= \hat{\bm\beta}_T\cdot\Ttil(x)$. We make the routing object a well-posed estimand---a
+\emph{pool-conditional policy value} $\Vpol(\pi)=\E_{\mathrm{seed}}[\Utr(\pi)\mid\text{locked
+pools}]$ over whole training runs, so there is no per-example potential outcome and no
+cross-example SUTVA violation---and we pre-register an interventional routing test
+\emph{that would certify} whether the coupling is load-bearing: six real masked-LoRA
+training arms, decided by an \emph{intersection-union test} (each contrast at the marginal
+level, no multiplicity penalty). The Intersection-Union construction
+(Berger 1982) is exact \emph{conditional on} valid level-$\alpha$ component tests; the
+implemented per-contrast inference is asymptotic (paired studentized bootstrap-$t$), so the
+finite-sample level is approximate. (These runs are not yet executed.) The headline
+claim is that LATTICE-R beats a \emph{faithfully reproduced} NAIT comparator (its
+layer-sum scored over the full released decoder set) and every locked baseline on
+retention-adjusted target utility at a \emph{measured} compute-matched budget. A
+ridge-FWL/double-ML mechanism certificate, computed out-of-sample through a frozen
+nuisance map, licenses the method non-circularly; a three-pool firewall, a measured
+compute ledger, and a closed-testing graph with an in-document FWER bound complete the
+plan. This is a \emph{Stage-1 Registered Report}: method, theory, and analysis plan are
+locked \emph{before} data collection. We report \textbf{no} experimental numbers; every
+results slot is an explicit placeholder. The v5 modules \emph{are implemented} as
+additive do-not-run pure-Python with a green unit harness of \textbf{93 passing}
+formula-evaluation tests (\texttt{server.authorized=false}, no run executed); those are
+code-correctness checks, not evidence.
+\end{abstract}
+
+% =====================================================================
+\section{Introduction}
+\label{sec:intro}
+% =====================================================================
+
+\paragraph{The gap.}
+Instruction tuning improves how language models follow instructions, but its returns
+depend heavily on \emph{which} examples are used~\cite{zhou2023lima,cao2023instruction}.
+The base method we build on, Neuron-Aware Data Selection (NAIT)~\cite{nait2026}, reads
+decoder-layer activations on in-domain data, reduces each layer to a sign-aligned
+principal direction $v_\ell$, scores a candidate by the \emph{layer-sum projection}
+$s_{\mathrm{NAIT}}(y)=\sum_{\ell=1}^{L}\big(A^{(\ell)}(y)\cdot v_\ell\big)$, and selects
+the top-$k$ (base Algorithm~1, Eqs.~1--6). Two structural commitments are baked in.
+\textbf{(i) Layer collapse to a sum, then top-$k$:} the layer-sum destroys \emph{which}
+layer carried the alignment evidence, and the method tunes \emph{all} parameters
+uniformly. \textbf{(ii) Selection only:} NAIT answers ``which examples,'' never ``given
+this example's internal evidence, \emph{where} should its gradient land.'' The
+per-layer axis is computed and then discarded. The open question is whether keeping
+that axis as a decision variable---using one attribution to choose both the examples
+\emph{and} the per-example tuning footprint---predicts downstream \emph{utility} at a
+\emph{compute-matched} budget, against a faithfully reproduced NAIT and a strong field
+of selectors that, recent work warns, often fail to beat random~\cite{diddee2024chasing}.
+
+\paragraph{Why this is hard to do honestly.}
+A naive ``trajectory/routing features beat endpoints'' comparison is easy to get wrong
+in four ways. \textbf{(a) Re-encoding:} a trajectory or routing summary can silently
+re-encode the endpoint signature, so a raw gain is an artifact of endpoint variance, not
+new information. We control the \emph{full} endpoint geometry by ridge orthogonalization,
+not a low-rank shadow. \textbf{(b) An ill-posed routing estimand:} a per-example
+``turn layer $\ell$ off'' contrast under fixed capacity is \emph{not} a single potential
+outcome---freeing rank $r_\ell$ forces a redistribution with no canonical rule---and a
+shared LoRA run violates cross-example SUTVA. We therefore make the estimand a
+\emph{policy value} over whole runs (the treated unit is the run, not the example).
+\textbf{(c) Invalid out-of-sample tests:} a nested-model $F$ on out-of-sample residual
+sums of squares has no valid reference; ``beats every control'' tested with a shared
+min-over-controls (max-$T$) quantile is anti-conservative at the least-favorable
+configuration. We use a cross-fit conditional-null permutation for the mechanism
+certificate and an \emph{intersection-union test}~\cite{berger1982iut} for every
+``beats all'' decision. \textbf{(d) Uncounted compute:} equal LoRA rank is not equal
+compute. We require a \emph{measured} compute-matched ledger (params, optimizer slots,
+realized FLOPs, skip-flag) and forbid ``savings'' without a measured reduction.
+
+\paragraph{Our approach (LATTICE-R).}
+We fit one per-example endpoint+NAIT-residualized trajectory attribution
+$\psivec(x)\in\R^{|\Aset|}$ over an anchor-layer set $\Aset$ ($|\Aset|=8$) and read it
+\emph{twice}: the data-selection score is the \emph{sum} $\sum_{\ell\in\Aset}\psi_\ell(x)$
+and the LoRA layer-routing \emph{policy} $\pi_\psi$ allocates a fixed rank budget $\Rtot$
+\emph{over $\Aset$} to the \emph{support} of $\psivec(x)$, holding the non-anchor layers
+$\Lset\setminus\Aset$ at a fixed baseline rank $r_0$ shared by every arm. The coupling
+identity (Sec.~\ref{sec:method})
+\[
+\textstyle\sum_{\ell\in\Aset}\psi_\ell(x)=\hat{\bm\beta}_T\cdot\Ttil(x)
+\]
+ties the two readouts to \emph{one} orthogonalized coefficient $\hat{\bm\beta}_T$ on
+\emph{one} out-of-sample residual $\Ttil(x)=\Tmat(x)-\Zmat(x)\Blam$. We pre-register an
+\emph{interventional routing test} (Gate R1) to certify the coupling once the authorized
+run executes: six real masked-LoRA arms over $\Aset$ ($\pi_\psi$, uniform,
+shuffled-$\psi$, random-mask, global-surgical, AdaLoRA), all compute-matched, decided by
+an intersection-union test of the pool-conditional policy-value gaps. The headline (Gate
+R2) is the pre-registered claim that LATTICE-R beats a
+faithful NAIT comparator scored over the full $\Lset$ and every locked baseline on
+retention-adjusted utility at a \emph{measured} matched budget.
+
+\paragraph{Position relative to NAIT, in one line.}
+\emph{NAIT sums the layer axis away (over all $\Lset$) and tunes uniformly; LATTICE-R
+keeps the layer axis as a per-example decision variable for selection \emph{and}
+capacity allocation over $\Aset$, derives both from one endpoint+NAIT-residualized
+attribution, and is \emph{designed to test}, under real matched-compute training runs
+that the authorized run will execute, whether the routing policy's value
+$\Vpol(\pi_\psi)$ beats every prior-art arm (random, AdaLoRA, surgical, NeFT, MoE-routing)
+at a compute-matched budget---each by its own marginal-$\alpha$ margin bound. (Runs are
+not yet executed; this is the pre-registered test, not a demonstrated result.)}
+
+\paragraph{Falsifiable central claim.}
+\begin{quote}\itshape
+One endpoint+NAIT-residualized trajectory attribution $\psivec$ drives both data
+selection (the sum) and LoRA layer routing (the support); at a measured compute-matched
+budget, the routing policy's pool-conditional value $\Vpol(\pi_\psi)$ exceeds that of
+every capacity-matched control by margin $\delta_{R1}$ (each control beaten by its own
+marginal-$\alpha$ lower bound), and the resulting selection+routing method beats a
+faithfully reproduced NAIT (scored over the full $\Lset$) and every locked baseline on
+retention-adjusted target utility.
+\end{quote}
+This is decisively falsifiable: if the residual attribution is null (Gate R0), or
+routing fails to beat every control (Gate R1), or the matched-budget win fails
+(Gate R2), the pre-registered fallback fires and the negative result is a clean,
+publishable falsification.
+
+\paragraph{Contributions.}
+\begin{enumerate}[leftmargin=1.5em,itemsep=2pt]
+\item \textbf{A coupled selection-and-routing method from one attribution.} Selection
+$=$ sum, routing $=$ support of the \emph{same} endpoint+NAIT-residualized attribution,
+tied by an exact identity (Sec.~\ref{sec:method}, Lemma~\ref{lem:couple}). NAIT cannot
+express this: it discards the per-layer axis it computes.
+\item \textbf{A well-posed, fully-specified routing estimand.} The routing object is a
+\emph{pool-conditional policy value} $\Vpol(\pi)$ over whole runs (no per-example
+potential outcome, no SUTVA), with the policy domain pinned to $\Aset$, the mask$\to$rank
+map a closed-form, deterministic, \emph{score-free} largest-remainder apportionment, and
+every control a single deterministic map of $x$.
+\item \textbf{An interventional routing certificate.} Six real masked-LoRA arms decided
+by an intersection-union test over a paired studentized bootstrap-$t$ (no multiplicity
+penalty; valid at the least-favorable configuration). The Intersection-Union construction
+(Berger 1982) is exact \emph{conditional on} valid level-$\alpha$ component tests; the
+implemented per-contrast inference is asymptotic (paired bootstrap-$t$), so the
+finite-sample level is approximate.
+\item \textbf{A faithful NAIT comparator and an honest budget.} NAIT reproduced over the
+full released $\Lset$ (base Eq.~5), both base variants run, the stronger gating the
+headline; a measured compute ledger with an extraction-parity kill.
+\item \textbf{Theory.} Strict propriety of the Brier factuality calibrator; dual-ridge
+feasibility/equivalence; residual orthogonality; the coupling identity; the
+intersection-union size bound; and the closed-testing FWER bound (Sec.~\ref{sec:theory}).
+\item \textbf{A locked, falsifiable protocol with a green implementation.} Datasets,
+models, baselines, multiplicity, margins, and kill-gates are pinned; the modules are
+implemented as do-not-run pure-Python with a green 93-test harness
+(\texttt{server.authorized=false}; Sec.~\ref{sec:setup}).
+\end{enumerate}
+
+\paragraph{Registered-Report status and implementation status.}
+Under the Registered Report model~\cite{chambers2014registered}, the unit of review is
+the question, method, and pre-registered analysis---not results. ``No results yet'' is
+the \emph{expected} Stage-1 state. We present a complete method, theory, and locked plan;
+\textbf{empirical validation follows the authorized run}, and every results slot in
+Sec.~\ref{sec:results} is a labeled placeholder. To make the plan executable and
+auditable now, the v5 modules \emph{are already implemented} as additive, do-not-run,
+pure-Python (stdlib only; no model load, no server call, no training); they are
+exercised by a green unit harness of \textbf{93 passing} formula-evaluation tests
+(Sec.~\ref{sec:setup}, Table~\ref{tab:modules}). \texttt{server.authorized} stays
+\textbf{false}; \emph{no run is executed}, and these tests are code-correctness checks,
+not evidence.
+
+% =====================================================================
+\section{Related Work}
+\label{sec:related}
+% =====================================================================
+
+\paragraph{Position relative to the base paper (NAIT).}
+NAIT~\cite{nait2026} selects instruction examples by neuron-level activation alignment,
+collapsing each layer to a principal direction and \emph{summing} the per-layer
+projections over the released decoder set. We do not claim neuron-aware selection is new:
+NAIT is both our must-beat comparator and our control. The endpoint signature $\phend$
+and the faithful NAIT layer-sum $s_{\mathrm{NAIT}}$ (over $\Lset$) both enter our full
+control block, so the contribution lives entirely in the part of the attribution that
+survives partialling out NAIT's own readout; by construction it cannot be an artifact of
+re-encoding the endpoint or NAIT score. Crucially, NAIT \emph{scores} over the full
+$\Lset$ (base Eq.~5), so our faithful comparator does too; LATTICE-R \emph{routes} only
+over the anchor set $\Aset$. These are different objects (comparator score vs.\ capacity
+mask) and there is no conflict.
+
+\paragraph{Instruction-tuning data selection (and its threat model).}
+Quality- and diversity-based selection~\cite{cao2023instruction,zhou2023lima},
+importance resampling~\cite{xie2023dsir}, and influence/gradient
+attribution~\cite{koh2017influence,pruthi2020tracin,xia2024less} select examples without
+reading internal reasoning trajectories. LESS~\cite{xia2024less} and
+TracIn~\cite{pruthi2020tracin} attribute utility through gradients; we reuse an
+influence-on-validation attribution only to \emph{define} our observational outcome
+$Y_{\mathrm{obs}}$ (so $Y_{\mathrm{obs}}$ is method-neutral), then ask whether a
+trajectory representation predicts that utility beyond endpoints, and whether \emph{routing}
+on it helps. We adopt the threat model of \cite{diddee2024chasing}: selection strategies
+generalize poorly and often fail to beat random, with selection cost sometimes exceeding
+full fine-tuning. Random, full-data, zero-shot, and gradient-representation selectors are
+therefore all required baselines, and Gate R2 is gated on beating the \emph{strongest}
+comparator, not NAIT alone. Coreset/diversity methods~\cite{sener2018coreset} are
+neighbours; we cite the classic core-set formulation rather than an unverified recent
+identifier.
+
+\paragraph{Layer-/neuron-selective and rank-adaptive tuning (the routing prior art).}
+AdaLoRA~\cite{zhang2023adalora} reallocates LoRA rank \emph{globally during training} by
+an SVD-importance score; Surgical Fine-Tuning~\cite{lee2023surgical} tunes one
+\emph{fixed} layer block for a whole task; NeFT~\cite{xu2024neft} tunes selected neurons,
+task-globally. LATTICE-R differs on two axes simultaneously: its allocation is
+\emph{per example} (conditioned on that example's internal evidence) and \emph{a priori}
+(decided before training from the attribution), and it is \emph{coupled} to the selection
+score. AdaLoRA, a global-surgical block, and (optionally) NeFT are required R1 routing
+arms, projected to the same integer capacity grid as every other arm, so that ``routing
+on $\psivec$ beats global/adaptive rank allocation'' is measured, not assumed.
+
+\paragraph{Inference, distances, calibration, and submodular selection.}
+We rely on partialling-out~\cite{frisch1933partial,lovell1963seasonal}, its modern
+double-ML form~\cite{chernozhukov2018double}, and ridge
+regularization~\cite{hoerl1970ridge} for the residual estimand;
+permutation/bootstrap inference~\cite{good2005permutation,efron1993bootstrap,hall1988bootstrap}
+and BCa intervals~\cite{efron1987bca} for valid out-of-sample testing; the
+intersection-union test~\cite{berger1982iut} for every ``beats all'' decision and a
+graphical sequentially-rejective scheme~\cite{bretz2009graphical,holm1979simple} for
+cross-family gating; strictly proper scoring~\cite{brier1950verification,gneiting2007strictly}
+and calibration error~\cite{guo2017calibration} for the factuality gate; intraclass
+correlation~\cite{shrout1979intraclass} for outcome reliability; Fisher-based
+stability~\cite{kirkpatrick2017ewc} for retention; the Nemhauser--Wolsey--Fisher
+$(1-1/e)$ guarantee~\cite{nemhauser1978submodular} with lazy
+greedy~\cite{minoux1978accelerated,wei2015submodular} for selection; sliced-Wasserstein
+distances~\cite{bonneel2015sliced,kolouri2019gsw,villani2009optimal} and kernel
+MMD~\cite{gretton2012mmd} for the distributional term; and LoRA~\cite{hu2022lora} for
+matched-budget tuning. Transformer-circuit analyses~\cite{elhage2021mathematical}
+motivate treating the residual stream as a path. Our novelty is not any single tool but
+their composition into a coupled selection-and-routing method certified by a policy-value
+routing test.
+
+% =====================================================================
+\section{Method}
+\label{sec:method}
+% =====================================================================
+
+Dependency order: faithful NAIT (control $+$ comparator) $\to$ trajectory operator
+$\Tmat(x)$ $\to$ endpoint+NAIT-residualized attribution $\psivec$ and the \emph{coupling
+identity} $\to$ routing \emph{policy} $\pi_\psi$ over $\Aset$ with a fully-specified
+mask$\to$rank map and its \emph{pool-conditional} policy value $\Vpol(\pi)$ $\to$
+compute-matched method comparison. Two outcome symbols are kept distinct and \emph{never}
+conflated: $Y_{\mathrm{obs}}(x)$ is the observational per-example utility (the R0
+regression target that $\psivec$ is fit to predict), and $\Utr(\pi)$ is the held-out
+\emph{training-outcome} functional (what R1/R2 score). The implemented modules realizing
+each block are named inline and listed in Table~\ref{tab:modules}.
+
+\subsection{Notation and the faithful NAIT baseline}
+For a transformer with released decoder set $\Lset$ (the NAIT base model is LLaMA-2-7b,
+so $|\Lset|=32$) and hidden width $d$, write the residual-stream activation at token
+position $p$, layer $\ell$ as $h_\ell(p)\in\R^d$. Over the anchor set $\Aset\subseteq
+\Lset$ ($|\Aset|=8$, fixed on validation), the endpoint signature is
+\begin{equation}
+\phend(x)=\operatorname*{concat}_{\ell\in\Aset}\big[\,h_\ell(p_{\mathrm{start}}),\,h_\ell(p_{\mathrm{end}})\,\big]\in\R^{2d|\Aset|}.
+\label{eq:phiend}
+\end{equation}
+\textbf{Faithful NAIT over the full $\Lset$} (\texttt{baselines/nait\_layerwise.py};
+base Eqs.~2--6). For every $\ell\in\Lset$ form $\Delta A^{(\ell)}(P_i)=A^{(\ell)}(t_K)-
+A^{(\ell)}(t_1)$ (Eq.~2), $v_\ell=\mathrm{PCA}_1(\{\Delta A^{(\ell)}(P_i)\}_i)$ (Eq.~3),
+sign-aligned by $v_\ell\leftarrow-v_\ell$ if $\mu_{\mathrm{diff}}\cdot v_\ell<0$ (Eq.~4),
+and score
+\begin{equation}
+s_{\mathrm{NAIT}}(y)=\sum_{\ell=1}^{L}\big(A^{(\ell)}(y)\cdot v_\ell\big),\qquad
+\mathrm{select}=\mathrm{top\text{-}}k(s_{\mathrm{NAIT}}).
+\label{eq:nait}
+\end{equation}
+Both base variants (first/last difference, Eq.~2; and the prose token-mean summary) are
+reproduced because the base paper is internally inconsistent; the \emph{stronger} is the
+comparator. A restricted 8-anchor score $s_{\mathrm{NAIT}}^{\Aset}=\sum_{\ell\in\Aset}
+(A^{(\ell)}\cdot v_\ell)$ is a \emph{secondary, gated} diagnostic only, reported after the
+full-$\Lset$ reproduction passes its unit check; it is \emph{never} the comparator the
+headline uses. The endpoint reconstruction (\texttt{baselines/nait.py}, $\phend$) is
+retained as a \emph{distinct} full endpoint control that must not coincide with the
+layerwise sum.
+
+\subsection{Trajectory operator}
+Let $H(x)=\{h_{\ell,s,t}\}$ index layers $\ell$, decoding steps $s$, tokens $t$.
+
+\paragraph{Distributional term $D_\ell$ (higher moments).}
+Collect the per-layer cloud $P_\ell(x)=\{h_{\ell,s,t}\}$ (subsampled to a persisted cap
+of $512$ vectors) and compare it to a held-out target cloud $Q_\ell^T$ by the
+sliced-Wasserstein-2 distance, estimated with $K{=}64$ persisted random projections:
+\begin{equation}
+D_\ell(x)=\sw\!\big(P_\ell(x),Q_\ell^T\big),\qquad
+\sw(P,Q)=\E_{u\sim\mathrm{Unif}(S^{d-1})}\!\big[W_2^2(u_\#P,\,u_\#Q)\big].
+\label{eq:sw2}
+\end{equation}
+
+\paragraph{Temporal curvature $\kappa_\ell$ (uses ordering).}
+With per-step mean path $g_{\ell,s}=\mathrm{mean}_t\,h_{\ell,s,t}$, velocity
+$v_{\ell,s}=g_{\ell,s+1}-g_{\ell,s}$, acceleration $a_{\ell,s}=g_{\ell,s+1}-2g_{\ell,s}+
+g_{\ell,s-1}$, the normalized bending energy is
+\begin{equation}
+\kappa_\ell(x)=\frac{1}{S_x-2}\sum_{s=2}^{S_x-1}\frac{\lVert a_{\ell,s}\rVert}{\lVert v_{\ell,s}\rVert\,\lVert v_{\ell,s-1}\rVert+\varepsilon}.
+\label{eq:curv}
+\end{equation}
+The cross-layer signature stacks the per-layer coordinates over $\Aset$:
+\begin{equation}
+\Tmat(x)=\big(\{D_\ell(x)\}_{\ell\in\Aset},\,\{\kappa_\ell(x)\}_{\ell\in\Aset}\big)\in\R^{2|\Aset|}.
+\label{eq:T}
+\end{equation}
+
+\subsection{Endpoint+NAIT-residualized attribution and the frozen out-of-sample map}
+\label{sec:residual}
+Define the per-example \emph{control feature row} for \emph{any} $x$ (in or out of
+sample),
+\begin{equation}
+\Zmat(x)=\big[\,\phend(x),\,s_{\mathrm{NAIT}}(x),\,V_{\mathrm{proj}}(x),\,\mathbf C(x),\,1\,\big]\in\R^{p},
+\label{eq:Z}
+\end{equation}
+where $V_{\mathrm{proj}}(x)\in\R^{|\Lset|}$ collects the per-layer NAIT projections
+$A^{(\ell)}(x)\cdot v_\ell$ (summing to $s_{\mathrm{NAIT}}$) and $\mathbf C$ are
+covariates (length, difficulty, family one-hots). Penalizing only the wide
+$[\phend,V_{\mathrm{proj}}]$ blocks via $\bm\Omega=\mathrm{blockdiag}(\mathbf I\ \text{on}\
+[\phend,V_{\mathrm{proj}}],\ \mathbf0\ \text{on}\ [s_{\mathrm{NAIT}},\mathbf C,1])$, we fit
+\emph{once} on the training fold and \emph{freeze} the ridge nuisance coefficient maps
+(\texttt{analysis/layer\_attribution.py}::\texttt{frozen\_nuisance\_map}),
+\begin{equation}
+\Blam=\big(\Zmat^\top\Zmat+\lambda\bm\Omega\big)^{+}\Zmat^\top\Tmat\in\R^{p\times2|\Aset|},
+\qquad
+\mathbf b_\lambda^{Y}=\big(\Zmat^\top\Zmat+\lambda\bm\Omega\big)^{+}\Zmat^\top Y_{\mathrm{obs}}.
+\label{eq:Blam}
+\end{equation}
+The deployed, \emph{out-of-sample} residuals for any $x$ are closed-form functions of $x$
+through its own row $\Zmat(x)$ (\texttt{residualize\_out\_of\_sample}):
+\begin{equation}
+\Ttil(x)=\Tmat(x)-\Zmat(x)\Blam,\qquad \widetilde Y(x)=Y_{\mathrm{obs}}(x)-\Zmat(x)\mathbf b_\lambda^{Y}.
+\label{eq:resid}
+\end{equation}
+On the stacked training rows this reproduces the in-sample residual maker
+$\Ttil=(\mathbf I-\Zmat(\Zmat^\top\Zmat+\lambda\bm\Omega)^{+}\Zmat^\top)\Tmat$ exactly, so
+no in-sample math changes; the only addition is that $\Ttil(x)$ is now defined for rows
+$\Zmat$ never saw (Theorem~\ref{thm:dual}). The orthogonalized trajectory coefficient
+(dual / $n$-space form, feasible at 7B width) on the observational target is
+\begin{equation}
+\hat{\bm\beta}_T=\big(\Ttil^\top\Ttil\big)^{+}\Ttil^\top\widetilde Y,
+\label{eq:beta}
+\end{equation}
+and the registered residual quantity is the partial-$R^2$,
+$\mathrm{partial\text{-}}R^2_T=(\mathrm{RSS}_{\mathrm{red}}-\mathrm{RSS}_{\mathrm{full}})/
+\mathrm{RSS}_{\mathrm{red}}$, with the overall increment $\Delta R^2_{\mathrm{overall}}$
+on the $\mathrm{TSS}$ denominator mapped to the deployment margin.
+
+\paragraph{Per-layer policy score and the coupling identity.}
+The per-layer \emph{routing policy score} is the per-layer contribution of $\hat{\bm\beta}_T$
+to the out-of-sample residual (\texttt{per\_layer\_policy\_score}):
+\begin{equation}
+\psi_\ell(x)=\hat\beta_{D,\ell}\,\widetilde D_\ell(x)+\hat\beta_{\kappa,\ell}\,\widetilde\kappa_\ell(x),
+\qquad \ell\in\Aset,
+\label{eq:psi}
+\end{equation}
+where $\widetilde D_\ell,\widetilde\kappa_\ell$ are the per-layer coordinates of $\Ttil(x)$.
+\begin{lemma}[Coupling identity]
+\label{lem:couple}
+Because $\Tmat(x)$ stacks the per-layer coordinates and $\hat{\bm\beta}_T$ is the single
+orthogonalized coefficient on $\Ttil$,
+\[
+\sum_{\ell\in\Aset}\psi_\ell(x)=\sum_{\ell\in\Aset}\big(\hat\beta_{D,\ell}\widetilde D_\ell(x)+\hat\beta_{\kappa,\ell}\widetilde\kappa_\ell(x)\big)=\hat{\bm\beta}_T\cdot\Ttil(x),
+\]
+for \emph{out-of-sample} $x$, since both sides use the same frozen $\Blam,\hat{\bm\beta}_T$.
+\end{lemma}
+\noindent Hence the \textbf{selection score} $\sum_{\ell\in\Aset}\psi_\ell(x)$ is exactly the
+endpoint+NAIT-residualized trajectory prediction $\hat{\bm\beta}_T\cdot\Ttil(x)$, and the
+\textbf{routing support} is $\mathrm{supp}(\psivec(x))\subseteq\Aset$: selection is the
+\emph{sum}, routing is the \emph{support}, of \emph{one} attribution. The identity is
+unit-tested in- and out-of-sample (\texttt{test\_layer\_routing.py}, item (a)). We
+emphasize $\psivec$ is a \emph{predictive} policy score, not a causal layer-write effect;
+the certification that writing to $\mathrm{supp}(\psivec)$ is the right place is the
+policy-value Gate R1, not this decomposition.
+
+\subsection{The routing policy and the fully-specified mask$\to$rank map}
+\label{sec:policy}
+A routing \emph{policy} maps each selected $x$ to an anchor mask and integer ranks
+(\texttt{layer\_function.py}):
+\begin{equation}
+\pi:x\mapsto\Big(m_{\Aset}(x)\in\{0,1\}^{\Aset},\,\{r_\ell(x)\}_{\ell\in\Aset}\Big),\quad
+\textstyle\sum_{\ell\in\Aset}r_\ell(x)=\Rtot,\quad r_\ell(x)=r_0\ \forall\ell\in\Lset\setminus\Aset,
+\label{eq:pol}
+\end{equation}
+so the $|\Lset\setminus\Aset|$ non-anchor layers form a fixed common substrate at rank
+$r_0$ that \emph{cancels in every contrast}. The mask$\to$rank map $\texttt{capacity\_match}$
+is a \emph{pure function of $(m_{\Aset},\Rtot,\rmax)$ and nothing else}---it reads no
+$\psivec$---defined on the feasible domain $\mathrm{DOM}=\{m_{\Aset}:|\mathrm{supp}(m_{\Aset})|\cdot
+\rmax\ge\Rtot\}$. Given a feasible mask with support $S$ of size $k$, it is the
+largest-remainder (Hamilton) apportionment: even base $q=\lfloor\Rtot/k\rfloor$ on every ON
+layer, a $+1$ top-up of the $\mathrm{rem}=\Rtot-kq$ leftover units to the lowest-index ON
+layers (deterministic ascending-$\ell$ tie-break), and a per-layer cap $\rmax$ enforced
+among the same ON layers (no support growth). Feasibility is guaranteed \emph{upstream} by
+the single constructor $\texttt{make\_feasible\_mask}(\text{raw},\text{score},\Rtot,\rmax)$,
+the \emph{only} place an arm-specific score is read: it lifts the empty mask to
+uniform-over-$\Aset$ and completes any under-$k_{\min}$ mask ($k_{\min}=\lceil\Rtot/\rmax\rceil$)
+with the highest-score OFF anchors. Thus $\texttt{capacity\_match}$ has \emph{no infeasible
+branch} and is total on $\mathrm{DOM}$; with $\rmax$ pinned so $|\Aset|\cdot\rmax\ge\Rtot$
+(Sec.~\ref{sec:setup}), $U_{\mathrm{train}}(\pi)$ is one implementation-independent
+functional. $\pi_\psi$ instantiates the raw mask $1[\psi_\ell(x)\ge\tau_{\mathrm{sel}}]$,
+lifts it via $\texttt{make\_feasible\_mask}$ (score $=\psivec$), then applies
+$\texttt{capacity\_match}$.
+\begin{lemma}[Feasibility / no-overflow; $\texttt{capacity\_match}$ is total and conserving on $\mathrm{DOM}$]
+\label{lem:feas}
+For every $m_{\Aset}\in\mathrm{DOM}$, $q=\lfloor\Rtot/k\rfloor\le\Rtot/k\le\rmax$; after the
+even-base and largest-remainder steps every ON layer carries $q$ or $q+1$. If $q<\rmax$
+then $q+1\le\rmax$ and the cap step is a no-op; if $q=\rmax$ then $\Rtot=k\rmax$ and
+$\mathrm{rem}=0$, so again no layer exceeds the cap. In both cases $\sum_{\ell}r_\ell=\Rtot$,
+no support is grown, and the output is a deterministic function of $(m_{\Aset},\Rtot,\rmax)$.
+\end{lemma}
+
+\subsection{The pool-conditional policy value and the kill-gates}
+\label{sec:gates}
+The held-out training-outcome functional is the retention-adjusted target utility of the
+model obtained by training the selected set under per-example masks$+$ranks $\{\pi(x)\}$
+(with the fixed $r_0$ substrate on $\Lset\setminus\Aset$), evaluated on the frozen
+held-out split. The \emph{policy value} is the \emph{pool-conditional} seed-expectation,
+and the confirmatory estimand is the per-control gap:
+\begin{equation}
+\Vpol(\pi)=\E_{\mathrm{seed}}\big[\Utr(\pi)\mid P_{\mathrm{train}},P_{\mathrm{val}},P_{\mathrm{dep}}\big],
+\qquad g_c=\Vpol(\pi_\psi)-\Vpol(\pi_c).
+\label{eq:V}
+\end{equation}
+The expectation is over training seeds only; the three pools are held at their single
+locked partition (Sec.~\ref{sec:setup}). The treated unit is the whole run, so there is
+\textbf{no per-example potential outcome and no cross-example SUTVA}. The seed-mean
+$\widehat\Vpol(\pi)=S^{-1}\sum_s U_{\mathrm{train},s}(\pi)$ is unbiased for $\Vpol(\pi)$, and the
+bootstrap-$t$ below resamples exactly the seed randomness it averages, so estimand and
+estimator are aligned and the claim is scoped to the locked pools.
+
+\paragraph{Gate R0 (mechanism certificate; \texttt{analysis/residual\_test.py}).}
+Reject ``$\Tmat$ adds nothing given $[\phend,\mathrm{NAIT}(\Lset)]$'' iff the
+conditional-null block permutation on the orthogonalized residuals $\Ttil$ (within
+family$\times$fold strata; $P{=}5000$; frozen cross-fit nuisance, $K{=}10$; no ridge refit
+inside a permutation) gives $p<\alpha_{R0}$ \emph{and} the cluster BCa-$95\%$ CI of
+$\mathrm{partial\text{-}}R^2_T$ excludes the floor, stable across $r\in\{8,16,32\}$ PCA
+poles. \emph{Fail $\Rightarrow$ the method reduces to NAIT; report a clean null}
+($\texttt{stop\_main\_novelty\_claim}$).
+
+\paragraph{Gate R1 (interventional routing certificate; \texttt{analysis/routing\_intervention.py}).}
+On $P_{\mathrm{val}}$, six real masked-LoRA arms over $\Aset$ (shared $r_0$, shared
+$\texttt{capacity\_match}$, shared seeds, compute-matched): $\pi_\psi$; $\pi_{\mathrm{unif}}$
+(all anchors ON); $\pi_{\mathrm{shuf}}$ (a fixed within-stratum permutation of the anchor
+labels applied to $\psivec$); $\pi_{\mathrm{rand}}$ (a deterministic pseudo-random subset of
+$\Aset$ matched in cardinality to $\pi_\psi$); $\pi_{\mathrm{global}}$ (a fixed global
+block $A_{\mathrm{glob}}$, surgical-style); $\pi_{\mathrm{ada}}$ (AdaLoRA importance from a
+fixed warm-up). \textbf{Every control is a single deterministic map of $x$}: all
+randomness is driven by fixed, pre-registered seeds combined with the example's stable
+content hash $H(x)$, so the randomization is \emph{part of the policy definition, not part
+of the $\Vpol(\pi)$ training-seed expectation}; $\pi_{\mathrm{ada}}$'s importance is frozen
+by a \emph{separate} seed $\mathrm{seed}_{\mathrm{ada}}$ run once \emph{outside} that
+expectation. The composite ``$\pi_\psi$ beats every control by $\delta_{R1}$'' is an
+intersection-union alternative,
+\begin{equation}
+H_0^{R1}=\bigcup_c\{g_c\le\delta_{R1}\},\qquad
+H_1^{R1}=\bigcap_c\{g_c>\delta_{R1}\},
+\label{eq:iutnull}
+\end{equation}
+decided by the intersection-union test~\cite{berger1982iut}: reject iff \emph{each}
+per-control one-sided lower bound $L_c(\alpha)$ exceeds $\delta_{R1}$, every $L_c$ from a
+paired studentized bootstrap-$t$ (Sec.~\ref{sec:inference}), at the \emph{marginal} level
+$\alpha$---\emph{no} penalty across the five controls, \emph{no} shared min-over-controls
+quantile. The reported simultaneous lower bound is $L_{R1}=\min_c L_c(\alpha)$. \emph{Fail
+$\Rightarrow$ drop routing, keep selection-only} ($\texttt{drop\_routing\_keep\_selection}$).
+
+\paragraph{Gate R2 (compute-matched method win; \texttt{analysis/matched\_budget.py}).}
+At a \emph{measured} compute-matched budget (\texttt{cost\_model.py} ledger), LATTICE-R's
+$\Utr$ must beat the stronger full-$\Lset$ NAIT variant \emph{and} every baseline by the
+locked margins. The R2-target ``beats every comparator'' claim is, like R1, an
+intersection-union test over the baseline set ($\delta_{\mathrm{target}}$). The remaining
+sub-claims are single margin tests: a \emph{lower} bound above $\delta_{\mathrm{rel}}$ for
+the relative-win margin, and an \emph{upper} bound below the ceiling for the
+non-inferiority drift/cost margins $\delta_{\mathrm{ret}},\delta_{\mathrm{hall}},
+\delta_{\mathrm{cost}}$; \emph{every} sub-claim must pass. \emph{Fail $\Rightarrow$ no
+method-win claim} ($\texttt{no\_method\_win\_claim}$).
+
+\paragraph{Gate R3 (honest two-sided cost).} \texttt{cost\_model.py} reports the
+extraction-parity multiplier ($>2.0\times\Rightarrow$ high-cost-analysis) and the
+training-side ledger; a ``training savings'' claim is licensed \emph{only} if a measured
+FLOP/wall-clock reduction with masked adapters actually skipped (skip-flag true) is
+recorded.
+
+\paragraph{Descriptive per-layer notion (not causal).} If a per-layer summary is desired,
+it is a run-level leave-one-anchor-layer policy-value difference $\Delta_\ell^{\mathrm{LOL}}
+=\Vpol(\pi_{\mathrm{full}})-\Vpol(\pi_{-\ell})$ with the explicit $\texttt{capacity\_match}$
+redistribution, labeled \emph{descriptive, not causal evidence}, and \emph{outside} the
+confirmatory $\alpha$. The off-manifold layer-ablation profile $J_{c,\ell}$ may enter the
+router prior only if it passes a validation gate against $\Delta_\ell^{\mathrm{LOL}}$; else
+it is dropped and the router uses $\psivec$ alone.
+
+\subsection{Valid inference for the mechanism certificate and the ``beats all'' maxima}
+\label{sec:inference}
+\textbf{R0 (cross-fit conditional-null permutation).} For each of $K{=}10$
+family-stratified folds, fit $\Blam,\mathbf b_\lambda^{Y},\lambda$ on the other nine and
+form the out-of-fold residuals; permute the rows of $\Ttil$ relative to $\widetilde Y$
+within family$\times$fold strata, recompute the held-out $\mathrm{partial\text{-}}R^2_T$,
+and report the add-one $p$-value; bracket by cluster BCa ($B{=}2000$). No
+$F$-distribution $p$-value is ever used inferentially.
+
+\noindent\textbf{Per-contrast inference (R1/R2): paired studentized bootstrap-$t$.} For
+control/comparator $c$, with per-seed paired differences $d_{c,s}=U_{\mathrm{train},s}(\pi_\psi)-
+U_{\mathrm{train},s}(\pi_c)$, gap $\hat g_c=\mathrm{mean}_s\,d_{c,s}$, seed standard error
+$\mathrm{se}$, resample seeds with replacement, recompute $t_c^{*(b)}=(\hat g_c^{*(b)}-\hat
+g_c)/\mathrm{se}^{*(b)}$, and form the one-sided lower bound
+\begin{equation}
+L_c(\alpha)=\hat g_c-t^{*}_{c,1-\alpha}\,\mathrm{se}.
+\label{eq:Lc}
+\end{equation}
+This is \emph{asymptotically valid}~\cite{hall1988bootstrap}; we claim \emph{only}
+asymptotic validity (an earlier exact-finite-$S$ sign-flip claim is withdrawn---i.i.d.\
+seeds make the $d_{c,s}$ i.i.d.\ but not symmetric about their mean). The ``beats all''
+decision is the IUT of Eq.~\eqref{eq:iutnull}: reject iff $L_c(\alpha)>\delta$ for every
+$c$, with $L_{R1}=\min_c L_c(\alpha)$ (and identically for R2-target).
+
+% =====================================================================
+\section{Theory}
+\label{sec:theory}
+% =====================================================================
+These results are discharged at the design stage (they are mathematical properties of the
+estimators, independent of data); the corresponding numeric sanity checks (the Brier
+identity, the coupling identity, capacity conservation, the IUT size at the
+least-favorable configuration, submodularity) are \emph{formula evaluations in the green
+unit harness, not evidence}.
+
+\subsection{Strict propriety of the Brier factuality calibrator}
+\begin{theorem}[Strict propriety]
+\label{thm:brier}
+Score the calibrator output $q\in[0,1]$ against a label $y\sim\mathrm{Bernoulli}(p)$ by
+the Brier rule $\ell_{\mathrm{Brier}}(q,y)=(q-y)^2$. The population risk
+$\E[(q-y)^2]=(q-p)^2+p(1-p)$ is uniquely minimized at $q=p$.
+\end{theorem}
+\begin{proof}
+$p(q-1)^2+(1-p)q^2=q^2-2pq+p=(q-p)^2+p(1-p)$; the term $p(1-p)$ is independent of $q$ and
+$(q-p)^2\ge0$ with equality iff $q=p$; taking expectation over contexts preserves
+strictness.
+\end{proof}
+\noindent Propriety proves \emph{calibration}, not eval-drift prediction; the factuality
+gate G6 therefore separately requires rank/linear correlation with held-out drift and an
+ECE ceiling before $\lambda_f$ may be non-zero (else $\lambda_f:=0$). None of this enters
+the confirmatory routing $\alpha$.
+
+\subsection{Dual feasibility of the frozen residual maker}
+\begin{theorem}[Dual equivalence and out-of-sample feasibility]
+\label{thm:dual}
+Fix a train fold with penalized endpoint/NAIT design $\bm\Phi$, unpenalized design
+$\mathbf U=[s_{\mathrm{NAIT}},\mathbf C,1]$, target $y$, penalty $\lambda>0$. The ridge fit
+$\min_{a,b}\lVert y-\bm\Phi a-\mathbf U b\rVert^2+\lambda\lVert a\rVert^2$ has the same
+fitted values---hence the same coefficient map $\Blam$ of Eq.~\eqref{eq:Blam}---as the dual
+system with $a=\bm\Phi^\top\alpha$, $\mathbf K=\bm\Phi\bm\Phi^\top+\lambda\mathbf I$:
+$(\mathbf U^\top\mathbf K^{-1}\mathbf U)b=\mathbf U^\top\mathbf K^{-1}y$,
+$\alpha=\mathbf K^{-1}(y-\mathbf U b)$. The dual touches the endpoint/NAIT width only
+through the $N\times N$ Gram; its cost is $O(N^2p+N^3)$, independent of $2d|\Aset|+|\Lset|$,
+so the full control is feasible at 7B width and $\Blam$ applies to any out-of-sample row.
+\end{theorem}
+\begin{proof}
+Stationarity in $a$ gives $a\in\mathrm{row}(\bm\Phi)$, $a=\bm\Phi^\top\alpha$ and
+$(\bm\Phi\bm\Phi^\top+\lambda\mathbf I)\alpha=y-\mathbf U b$; stationarity in $b$ is the
+unpenalized normal equation; eliminating $\alpha$ yields the Schur-reduced $b$-equation.
+Both solve the same strictly convex program ($\lambda>0$), so the fitted values coincide;
+the Gram is the only object scaling with the control width, and $\Blam$ is a fixed
+$p\times2|\Aset|$ matrix evaluable on any $\Zmat(x)$.
+\end{proof}
+
+\subsection{Residual orthogonality}
+\begin{lemma}[The residual estimand is orthogonal to the endpoint/NAIT geometry]
+\label{lem:resid}
+With $\Ttil=\Tmat-\Zmat\Blam$ and $\widetilde Y=Y_{\mathrm{obs}}-\Zmat\mathbf b_\lambda^{Y}$,
+as $\lambda\to\infty$ on the penalized block $\hat{\bm\beta}_T$ measures only the
+association between $Y_{\mathrm{obs}}$ and $\Tmat$ orthogonal to
+$[\phend,s_{\mathrm{NAIT}},V_{\mathrm{proj}},\mathbf C,1]$, and
+$\mathrm{partial\text{-}}R^2_T=0$ whenever $\Tmat$ is a linear function of that control
+block.
+\end{lemma}
+\begin{proof}[Proof sketch]
+By Frisch--Waugh--Lovell~\cite{frisch1933partial,lovell1963seasonal}, the joint coefficient
+of $\Tmat$ equals that from regressing $\widetilde Y$ on $\Ttil$; ridge on the penalized
+block is FWL with a shrinkage operator~\cite{hoerl1970ridge}, and the unpenalized block is
+projected out exactly. If $\Tmat=[\,\cdot\,]M$, then $\Ttil\to\mathbf0$ on the spanned
+directions and the partial-$R^2$ vanishes.
+\end{proof}
+\noindent This is the formal content of ``beyond NAIT'': because $s_{\mathrm{NAIT}}$ and the
+per-layer $V_{\mathrm{proj}}$ are \emph{in} the control, a residual NAIT's own layer-sum
+explains cannot pass R0.
+
+\subsection{First-moment pooling is provably insufficient}
+\begin{proposition}[Curvature is not a function of the first-moment pool]
+\label{prop:curv}
+There exist step-sequences with identical per-layer first-moment summaries but different
+$\kappa_\ell$.
+\end{proposition}
+\begin{proof}
+A reordering of the steps leaves the activation-multiset mean invariant but changes the
+ordered second differences $a_{\ell,s}$ of Eq.~\eqref{eq:curv} whenever the path is
+non-collinear, so $\kappa_\ell$ is not a function of the first-moment pool. NAIT's
+first/last difference and token-mean summaries are exactly such first-moment summaries.
+\end{proof}
+
+\subsection{The intersection-union test is exact conditional on valid component tests}
+\begin{proposition}[IUT size; Berger 1982]
+\label{prop:iut}
+Let $H_0=\bigcup_{c=1}^{J}\{g_c\le\delta\}$ and let each component reject iff
+$L_c(\alpha)>\delta$ with $L_c(\alpha)$ a level-$\alpha$ lower confidence bound for $g_c$.
+The IUT rejects $H_0$ iff all $J$ components reject. Then for any $\theta\in H_0$ there is
+$c^\star$ with $g_{c^\star}\le\delta$, and
+$P_\theta(\text{reject})\le P_\theta(L_{c^\star}(\alpha)>\delta)\le P_\theta(L_{c^\star}(\alpha)
+>g_{c^\star})\le\alpha$. Hence the IUT has size $\le\alpha$ with \emph{no} multiplicity
+correction and for every $J$, regardless of dependence among contrasts. The supremum is at
+the least-favorable configuration ($g_{c^\star}=\delta$, others $\to\infty$)---exactly where
+a min-over-controls shared quantile is anti-conservative.
+\end{proposition}
+\noindent The Intersection-Union construction is therefore \emph{exact conditional on}
+each $L_c(\alpha)$ being a valid level-$\alpha$ component bound. Our implemented
+$L_c(\alpha)$ is the per-contrast bootstrap-$t$ bound~\cite{hall1988bootstrap}, which is
+only \emph{asymptotically} valid (i.i.d.\ seeds make the $d_{c,s}$ i.i.d.\ but not
+symmetric, so no finite-$S$ exactness is available); the IUT thus inherits asymptotic, not
+finite-sample, validity, and the finite-sample level is approximate. What the union bound
+\emph{does} guarantee unconditionally is that no multiplicity penalty is incurred for any
+$J$ under arbitrary dependence among contrasts. This is unit-checked: the per-contrast test
+attains nominal level on a null DGP, and the IUT holds size $\le\alpha$ at the
+single-binding-control configuration when fed valid component bounds
+(\texttt{test\_layer\_routing.py}, item (c)).
+
+\subsection{Closed-testing FWER on the corrected leaves}
+\begin{theorem}[FWER bound]
+\label{thm:fwer}
+On the confirmatory family $\{H_0^{R0},H_0^{R1},H_0^{G2t},H_0^{G2r},H_0^{G2h},H_0^{G2c}\}$,
+with the pinned graphical scheme~\cite{bretz2009graphical} $R0\to R1\to G2t\to
+\{G2r,G2h,G2c\}$ (weights $w_0{=}1$, edges $1.0$, split $(0.34,0.33,0.33)$, recycle $1.0$),
+with $R0$ tested by the frozen-nuisance within-stratum block-permutation
+partial-$R^2$ test (\S\ref{sec:inference}), the two union-null leaves $R1,G2t$ each tested
+\emph{in every intersection that contains them} by the full-union IUT (Prop.~\ref{prop:iut}),
+and each drift/cost singleton by the asymptotic bootstrap-$t$ at its weighted-Holm $\alpha$,
+the closed test controls the family-wise error rate at $\alpha=0.05$ (asymptotically).
+\end{theorem}
+\begin{proof}[Proof sketch]
+Each leaf local test holds its level: R0 by the frozen-nuisance within-stratum
+exchangeability of the permutation; every union-null leaf by the full-union IUT, whose size
+is $\le$ its node $\alpha$ for the full union null regardless of the other members of the
+intersection (Prop.~\ref{prop:iut}); each single margin leaf by the bootstrap-$t$. A
+\emph{sub-scoped} IUT (a proper subset of a union's components) is forbidden because it
+tests a strictly smaller hypothesis and is anti-conservative when the binding component is
+omitted. By the closed-testing principle, an elementary $H_i$ is rejected only if all
+intersections containing $i$ reject at their level; requiring the full union inside every
+such intersection only shrinks the rejection region, so $P(\text{reject any true }H_0)\le
+\alpha$. The data-dependent ``max over arms'' cannot leak type-I error because the IUT
+requires \emph{every} arm to clear the margin.
+\end{proof}
+\noindent The shortcut/brute-force equivalence over all $2^6-1=63$ intersections, including
+the IUT leaves and the least-favorable single-binding-control configuration, is asserted in
+code (\texttt{analysis/closed\_testing.py}; \texttt{test\_layer\_routing.py}, item (f)).
+
+\subsection{Selection objective: monotone-submodular $(1-1/e)$ guarantee}
+\begin{theorem}[Greedy approximation]
+\label{thm:submod}
+With per-example utility $u(x)=\max(0,\sum_{\ell\in\Aset}\psi_\ell(x)-\lambda_r\hat r(x)-
+\lambda_f\hat f(x))$ and the facility-location coverage $C(S)=\sum_{e}w_e\max_{x\in S}
+\sigma(x,e)$, the objective $F(S)=\sum_{x\in S}u(x)+\mu C(S)$ ($u\ge0,w_e\ge0,\sigma\in[0,1],
+\mu\ge0$) is monotone submodular; greedy returns $F(S_{\mathrm{greedy}})\ge(1-1/e)F(S^\star)$,
+and lazy greedy returns the identical set.
+\end{theorem}
+\begin{proof}
+$\sum_{x\in S}u(x)$ is modular and monotone; each $\max_{x\in S}\sigma(x,e)$ is monotone
+with non-increasing marginals (submodular); a non-negative weighted sum preserves
+monotone-submodularity, so the Nemhauser--Wolsey--Fisher
+bound~\cite{nemhauser1978submodular} applies and lazy greedy~\cite{minoux1978accelerated}
+gives the same set. Routing is applied \emph{after} selection, so it never enters $F$ and
+the guarantee is untouched.
+\end{proof}
+
+% =====================================================================
+\section{Experimental Setup (Pre-Registered Analysis Plan)}
+\label{sec:setup}
+% =====================================================================
+\texttt{server.authorized} stays \textbf{false}. Everything below is locked \emph{before}
+data collection; \emph{no command is executed here}. \textbf{All pre-registered decision
+thresholds---margins ($\delta_{R1},\delta_{\mathrm{target}},\dots$), capacity
+($\Rtot,\rmax,r_0$), floors ($\texttt{floor\_partial},\rho_J$), control seeds, and the
+closed-test $\alpha$-allocation---are pinned NOW as design choices} (concrete values in the
+``Locked symbols, thresholds, and seeds'' paragraph below and in
+\texttt{configs/experiments/lattice\_v5.yaml}); the multiplicity-structure constants
+(graph weights, edges, split, IUT family) are likewise pinned. Only genuinely
+\emph{empirical} quantities (resolved commit/tokenizer hashes, measured FLOPs, and every
+observed result cell) remain \texttt{DATA\_NEEDED}, resolved at run authorization.
+
+\paragraph{Backbones (pinned, released checkpoints).}
+Primary \texttt{Qwen2.5-7B-Instruct}; secondary \texttt{Qwen2.5-1.5B-Instruct} (two-size,
+Apache-2.0)~\cite{qwen2025}; alternates \texttt{Llama-3.1-8B-Instruct} /
+\texttt{Mistral-7B-Instruct-v0.3}. LoRA only~\cite{hu2022lora}; matched rank/steps/tokens
+across all methods. The faithful NAIT comparator is reproduced over the released decoder
+set $\Lset$ of each backbone (the NAIT base model is LLaMA-2-7b, $|\Lset|=32$). Exact commit
+revisions and tokenizer hashes are resolved (not invented) at run authorization.
+
+\paragraph{Datasets (pinned identities; content hashes resolved at authorization).}
+Candidate pool by family: MetaMathQA (math)~\cite{yu2024metamath}, the permissive
+\texttt{glaiveai/glaive-code-assistant} code-instruct set~\cite{glaive2023codeassistant},
+and HotpotQA-distractor (multi-hop)~\cite{yang2018hotpotqa}; held-out
+retention eval MMLU~\cite{hendrycks2021mmlu}; hallucination eval
+TruthfulQA~\cite{lin2022truthfulqa} $+$ FActScore-style atomic-claim
+factuality~\cite{min2023factscore} (also the factuality-gate ground truth).
+
+\paragraph{Three-pool leakage firewall (\texttt{analysis/pool\_firewall.py}).}
+A persisted hash partitions the corpus into example-disjoint, family-stratified
+$P_{\mathrm{train}}$ (learn $\psivec$, $\Blam$, $\mathbf b_\lambda^Y$, NAIT directions,
+LOCI centroids; $Y_{\mathrm{obs}}$ here), $P_{\mathrm{val}}$ (estimate the routing policy
+values $\Vpol(\pi_{\mathrm{arm}})$; $\Utr$ here), and $P_{\mathrm{dep}}$ (final
+selection/routing, reading activations only through the frozen $P_{\mathrm{train}}$
+operators). \textbf{The partition is locked}: every confirmatory estimand is conditional on
+it (Eq.~\eqref{eq:V}). $Y_{\mathrm{obs}}$ and $\Utr$ never co-occur in an equation; no
+$P_{\mathrm{dep}}$ outcome enters the $P_{\mathrm{dep}}$ decision. A multi-pool re-split is
+a separate \emph{non-confirmatory} generalization probe with its own Holm accounting.
+
+\paragraph{Baselines and routing arms (locked).}
+Confirmatory selection comparators: \texttt{nait\_layerwise} over $\Lset$ (the stronger,
+decisive NAIT), \texttt{endpoint\_neuron\_selection} ($\phend$, full control),
+\texttt{random\_subset}, \texttt{full\_data\_it} (upper bound),
+\texttt{quality\_score\_selection}, \texttt{influence\_gradient\_selection} /
+LESS~\cite{xia2024less}, \texttt{zero\_shot\_select}. Routing arms (R1, all over $\Aset$ with
+shared $r_0$ and shared $\texttt{capacity\_match}$): \texttt{uniform\_lora},
+\texttt{shuffled\_psi}, \texttt{random\_mask}, \texttt{global\_surgical}~\cite{lee2023surgical},
+\texttt{AdaLoRA}~\cite{zhang2023adalora}, optional \texttt{NeFT}~\cite{xu2024neft},
+\texttt{lora\_moe\_routing}. The 8-anchor NAIT is a secondary diagnostic, never the headline
+comparator. ``Beats NAIT'' requires beating the stronger full-$\Lset$ variant; ``beats SOTA
+selection'' requires beating \emph{every} comparator under the IUT.
+
+\paragraph{Multiplicity (closed-testing graph, FWER $\alpha=0.05$).}
+The confirmatory family is the six nulls $\{R0,R1,G2t,G2r,G2h,G2c\}$. The graphical scheme
+(Maurer--Bretz)~\cite{bretz2009graphical} routes all mass through R0:
+$R0\to R1\to G2t\to\{G2r,G2h,G2c\}$ with locked weights ($w_0{=}1$, edges $1.0$, split
+$(w_r,w_h,w_c){=}(0.34,0.33,0.33)$, recycle $1.0$). R1 and G2t are \emph{single union-null
+leaves} decided by the full-union IUT (Eq.~\eqref{eq:iutnull}); the within-trajectory R0
+node uses two-layer Holm with the joint block as gatekeeper. FWER $\le0.05$ is established
+in-document (Theorem~\ref{thm:fwer}). Ablations (D-only, $\kappa$-only, $J$ on/off, $\mu{=}0$,
+$\Delta_\ell^{\mathrm{LOL}}$, the multi-pool probe) are \emph{exploratory}, outside the
+confirmatory $\alpha$.
+
+\paragraph{Precondition gates.}
+\emph{Factuality (G6):} $\lambda_f$ may be non-zero only if, on a held-out slice, Spearman
+$\rho(\hat f,\text{drift})\ge0.3$ and Pearson $r\ge0.3$ (one-sided lower $95\%$ CI $>0$) and
+ECE $\le0.1$~\cite{guo2017calibration}; else $\lambda_f:=0$. \emph{Outcome reliability
+(G7):} before the R0 regression on the influence proxy $Y_{\mathrm{obs}}$, require
+$\mathrm{ICC}(2,1)\ge0.6$ across $\ge3$ seeds~\cite{shrout1979intraclass} and Spearman
+$\rho(Y_{\mathrm{obs}},\Delta_{\mathrm{retrain}})\ge0.3$ (lower $95\%$ CI $>0$); else fall
+back to the direct retrain-delta and do not run the proxy regression. \emph{$J$-validation:}
+$J_{c,\ell}$ enters the router prior only if it correlates with $\Delta_\ell^{\mathrm{LOL}}$;
+else dropped.
+
+\paragraph{Measured compute ledger (\texttt{cost\_model.py}).}
+Per arm: parameter count, optimizer-state slots, \emph{realized} FLOPs (measured, not
+rank-inferred), wall-clock, batch/accumulation policy, and a skip-flag (whether masked
+adapters are excluded from the backward pass). R2's matched budget requires equality within
+a locked tolerance on params, optimizer slots, and realized FLOPs; the shared $r_0$
+substrate and shared $\texttt{capacity\_match}$ reduce the match to $\Aset$. Equal rank is
+\emph{not} equal compute; an extraction-parity multiplier $>2.0\times$ declares
+high-cost-analysis with no deployment claim.
+
+\paragraph{Locked symbols, thresholds, and seeds (pre-registered design choices).}
+All pre-registered \emph{decision} thresholds are \textbf{locked now} in
+\texttt{configs/experiments/lattice\_v5.yaml}; they are design choices fixed before any
+run, \emph{not} results, so the analysis cannot be tuned post hoc. Only genuinely
+empirical quantities (resolved checkpoint SHAs, measured FLOPs, observed gaps) remain
+\texttt{DATA\_NEEDED}. Shared seeds $0..19$ (\texttt{configs/seeds/paper\_20.txt});
+10-fold family-stratified cross-fit for R0; $S\ge20$ seeds for R1/R2;
+$B_{\mathrm{bt}}{=}10000$ bootstrap-$t$ resamples. \emph{Capacity (feasibility-coupled):}
+$\Rtot{=}64$ allocated over $\Aset$ ($|\Aset|{=}8$, so an even split is the standard
+rank-$8$ per anchor), $\rmax{=}16$, $r_0{=}4$ on $\Lset\setminus\Aset$. $\rmax$ is pinned
+so $|\Aset|\cdot\rmax{=}128\ge64{=}\Rtot$, hence $1_{\Aset}\in\mathrm{DOM}$,
+$k_{\min}{=}\lceil\Rtot/\rmax\rceil{=}4\le|\Aset|$, and $\texttt{capacity\_match}$ is total
+and score-free (Lemma~\ref{lem:feas}). \emph{Margins (normalized $[0,1]$ utility):}
+$\delta_{R1}{=}\delta_{\mathrm{target}}{=}0.01$ (one normalized utility point---a
+\emph{meaningful} routing/method win). The margin is a power-justified \emph{design} floor,
+not a fitted constant; the back-of-envelope derivation is: with $S{=}20$ paired seeds and a
+target per-seed paired-difference SD $\sigma_d\!\approx\!0.02$ on normalized utility, the
+standard error of the mean gap is $\mathrm{se}\!=\!\sigma_d/\sqrt{S}\!\approx\!0.02/\sqrt{20}
+\!\approx\!0.0045$. At a plausible true gap $g\!\approx\!0.025$ (just over $1\sigma_d$ of
+per-seed separation), the non-centrality is
+$(g-\delta_{R1})/\mathrm{se}\!=\!(0.025-0.01)/0.0045\!\approx\!3.3$, against a one-sided
+$z_{0.95}\!\approx\!1.64$ critical value, giving $\Phi(3.3-1.64)\!=\!\Phi(1.66)\!\approx\!0.95$
+asymptotic power, conservatively $\gtrsim\!0.8$ once the finite-$S$ bootstrap-$t$ quantile
+inflation is accounted for. A smaller margin would not be practically meaningful; a larger
+one would demand implausibly large true gaps to clear at $S{=}20$. $\delta_{\mathrm{rel}}{=}0$
+(non-negativity guard atop $\delta_{\mathrm{target}}$), non-inferiority ceilings
+$\delta_{\mathrm{ret}}{=}\delta_{\mathrm{hall}}{=}0.02$ and $\delta_{\mathrm{cost}}{=}0.05$
+(tolerable drift/cost). \emph{Floors/gates:} partial-$R^2$ floor
+$\texttt{floor\_partial}{=}0.01$ (the residual must explain $\ge1\%$ of residual variance
+beyond $[\phend,\mathrm{NAIT}(\Lset)]$), $\rho_J{=}0.30$ (moderate monotone agreement),
+$\tau_{\mathrm{sel}}$ the $P_{\mathrm{train}}$ quantile yielding mean raw anchor
+cardinality $\bar k{=}4$. \emph{Control specifics:} fixed seeds
+$\mathrm{seed}_{\mathrm{rand}},\mathrm{seed}_{\mathrm{shuf}},\mathrm{seed}_{\mathrm{ada}}$
+(integers outside $0..19$), the surgical block $A_{\mathrm{glob}}$ as the top-$4$ anchors
+by pooled $|\psi_\ell|$, AdaLoRA warm-up $W_{\mathrm{ada}}{=}200$ steps. \emph{Pooling:}
+$\texttt{pool\_split\_seed}$ fixes the single locked $(P_{\mathrm{train}},P_{\mathrm{val}},
+P_{\mathrm{dep}})$ partition; marginal level $\alpha{=}0.05$; ledger tolerance
+$2\%$; the $\lambda$ grid is cross-validated per fold. The closed-test $\alpha$-allocation
+($w_0{=}1$ on R0, unit edges $R0{\to}R1{\to}G2t$, split $(0.34,0.33,0.33)$, recycle $1.0$)
+is the pinned graphical scheme (Sec.~\ref{sec:theory}).
+
+\paragraph{Implementation status and the green unit harness.}
+The v5 modules \emph{are implemented} as additive, do-not-run, pure-Python (stdlib only; no
+model load, no server call, no training); callers supply already-measured tensors/contrasts
+at run-later. They are exercised by a green harness of \textbf{93 passing}
+formula-evaluation tests across six files: \texttt{test\_layer\_routing.py} (26),
+\texttt{test\_trajectory\_selection.py} (35), \texttt{test\_residualize\_gates.py} (19),
+\texttt{test\_endpoint\_baseline.py} (7), \texttt{test\_selection\_schema\_metrics.py} (3),
+and \texttt{test\_project\_contracts.py} (3). These cover the coupling identity in/out of
+sample, $\texttt{capacity\_match}$ conservation/score-freeness across all feasible
+cardinalities, the IUT size at the least-favorable configuration with the margin entering
+the statistic, deterministic control maps (including $\pi_{\mathrm{ada}}$ frozen outside
+$\Vpol$), the faithful-NAIT-over-$\Lset$ reproduction, the firewall leakage assertions, the
+closed-testing shortcut$=$brute-force equivalence with FWER control, the R0 permutation
+placebo level, and the Brier-propriety/G6 checks. \texttt{server.authorized} stays
+\textbf{false}; \emph{no run is executed}; these are code-correctness checks, \emph{not}
+evidence. Table~\ref{tab:modules} maps modules to method blocks.
+
+\begin{table}[t]
+\centering
+\caption{Implemented v5 modules (do-not-run, pure-Python; green harness, no run executed).
+Status is \emph{implemented \& unit-tested}, \emph{not} executed.}
+\label{tab:modules}
+\small
+\begin{tabular}{lll}
+\toprule
+Module & Method block & Status \\
+\midrule
+\texttt{layer\_function.py} & $\texttt{capacity\_match}$/$\texttt{make\_feasible\_mask}$/controls (Sec.~\ref{sec:policy}) & implemented; green \\
+\texttt{cost\_model.py} & measured compute ledger, extraction parity (Gate R3) & implemented; green \\
+\texttt{baselines/nait\_layerwise.py} & faithful NAIT over $\Lset$ (Eq.~\eqref{eq:nait}) & implemented; green \\
+\texttt{analysis/layer\_attribution.py} & frozen $\Blam$, out-of-sample $\Ttil$, $\psivec$, coupling & implemented; green \\
+\texttt{analysis/routing\_intervention.py} & policy value, bootstrap-$t$, IUT (Gate R1) & implemented; green \\
+\texttt{analysis/matched\_budget.py} & R2-target IUT $+$ margin sub-claims (Gate R2) & implemented; green \\
+\texttt{analysis/closed\_testing.py} & graph, IUT leaves, 63-intersection closure, FWER & implemented; green \\
+\texttt{analysis/pool\_firewall.py} & locked three-pool firewall, leakage assertions & implemented; green \\
+\texttt{schemas\_v2.py} (\texttt{RouterOutputs}, provenance) & auditable records (additive) & implemented; green \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+% =====================================================================
+\section{Results}
+\label{sec:results}
+% =====================================================================
+\emph{This is a Stage-1 Registered Report: no experimental numbers are reported.} The
+tables and figures below are pre-registered placeholders describing exactly what will be
+reported after the authorized run; \textbf{no value is fabricated}. The named primary cells
+are: R0 $=$ \texttt{Qwen2.5-7B (math)} $\mathrm{partial\text{-}}R^2_T$ decision; R1 $=$ the
+IUT verdict over the five controls at $\delta_{R1}$ with $L_{R1}=\min_c L_c(\alpha)$; R2 $=$
+the retention-adjusted-gain win vs.\ \texttt{nait\_layerwise}($\Lset$) under the matched
+ledger.
+
+\begin{table}[t]
+\centering
+\caption{\dataneeded{Gate R0 --- mechanism certificate.} Per backbone/family: median-of-folds
+$\mathrm{partial\text{-}}R^2_T$ and $\Delta R^2_{\mathrm{overall}}$ under the full
+$[\phend,\mathrm{NAIT}(\Lset)]$ control, conditional-null block-permutation $p$ ($P{=}5000$),
+cluster BCa $95\%$ CI ($B{=}2000$), decision vs.\ the locked floor.}
+\label{tab:r0}
+\begin{tabular}{lccccc}
+\toprule
+Backbone / family & $\mathrm{partial\text{-}}R^2_T$ & $\Delta R^2_{\mathrm{overall}}$ & perm.\ $p$ & BCa $95\%$ CI & Decision \\
+\midrule
+Qwen2.5-7B (math)   & \dataneeded{} & \dataneeded{} & \dataneeded{} & \dataneeded{} & \dataneeded{} \\
+Qwen2.5-7B (code)   & \dataneeded{} & \dataneeded{} & \dataneeded{} & \dataneeded{} & \dataneeded{} \\
+Qwen2.5-7B (QA)     & \dataneeded{} & \dataneeded{} & \dataneeded{} & \dataneeded{} & \dataneeded{} \\
+Qwen2.5-1.5B (all)  & \dataneeded{} & \dataneeded{} & \dataneeded{} & \dataneeded{} & \dataneeded{} \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{table}[t]
+\centering
+\caption{\dataneeded{Gate R1 --- interventional routing certificate (the headline mechanism).}
+Per-control pool-conditional gap $\hat g_c$, paired bootstrap-$t$ lower bound $L_c(\alpha)$
+vs.\ $\delta_{R1}$, and per-control reject; the IUT rejects iff every $L_c(\alpha)>\delta_{R1}$,
+with the simultaneous bound $L_{R1}=\min_c L_c(\alpha)$ ($S\ge20$ seeds, compute-matched).}
+\label{tab:r1}
+\begin{tabular}{lcccc}
+\toprule
+Control arm & $\hat g_c$ & $L_c(\alpha)$ & vs.\ $\delta_{R1}$ & reject \\
+\midrule
+$\pi_{\mathrm{unif}}$ (uniform LoRA)      & \dataneeded{} & \dataneeded{} & \dataneeded{} & \dataneeded{} \\
+$\pi_{\mathrm{shuf}}$ (shuffled $\psivec$) & \dataneeded{} & \dataneeded{} & \dataneeded{} & \dataneeded{} \\
+$\pi_{\mathrm{rand}}$ (random mask)        & \dataneeded{} & \dataneeded{} & \dataneeded{} & \dataneeded{} \\
+$\pi_{\mathrm{global}}$ (surgical)         & \dataneeded{} & \dataneeded{} & \dataneeded{} & \dataneeded{} \\
+$\pi_{\mathrm{ada}}$ (AdaLoRA)             & \dataneeded{} & \dataneeded{} & \dataneeded{} & \dataneeded{} \\
+\midrule
+\textbf{IUT verdict} ($L_{R1}{>}\delta_{R1}$) & \multicolumn{4}{c}{\dataneeded{}} \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{table}[t]
+\centering
+\caption{\dataneeded{Gate R2 --- compute-matched method win vs.\ NAIT and the baseline set.}
+Relative target gain, retention-adjusted gain, retention drift, hallucination drift, and the
+ledger-match decision over $\ge20$ seeds; R2-target is the IUT over the baseline set
+($\delta_{\mathrm{target}}$); each drift/cost sub-claim is a one-sided margin test.}
+\label{tab:r2}
+\begin{tabular}{lccccc}
+\toprule
+Selector & rel.\ gain & ret.-adj.\ gain & ret.\ drift & halluc.\ drift & ledger match \\
+\midrule
+random\_subset                  & \dataneeded{} & \dataneeded{} & \dataneeded{} & \dataneeded{} & \dataneeded{} \\
+influence\_gradient / LESS       & \dataneeded{} & \dataneeded{} & \dataneeded{} & \dataneeded{} & \dataneeded{} \\
+NAIT (\texttt{nait\_layerwise}, $\Lset$) & \dataneeded{} & \dataneeded{} & \dataneeded{} & \dataneeded{} & \dataneeded{} \\
+LATTICE-R (ours)                 & \dataneeded{} & \dataneeded{} & \dataneeded{} & \dataneeded{} & \dataneeded{} \\
+full\_data\_it (upper bound)     & \dataneeded{} & \dataneeded{} & \dataneeded{} & \dataneeded{} & \dataneeded{} \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{table}[t]
+\centering
+\caption{\dataneeded{Honest cost ledger (Gate R3) and precondition gates G6/G7.} Per-pool
+selection multiplier; differential trajectory extraction/storage I/O; amortized validation
+($R{=}1$, break-even $R^\star$); the extraction-parity decision vs.\ $2.0\times$; and the
+realized G6 (Spearman/Pearson/ECE) and G7 (ICC, proxy$\leftrightarrow$retrain $\rho$) values.}
+\label{tab:cost}
+\begin{tabular}{lcc}
+\toprule
+Line & value & gate decision \\
+\midrule
+per-pool selection multiplier                & \dataneeded{} & \dataneeded{} \\
+differential trajectory extraction/storage   & \dataneeded{} & \dataneeded{} \\
+amortized validation ($R{=}1$, $R^\star$)    & \dataneeded{} & \dataneeded{} \\
+G6 (Spearman/Pearson/ECE)                    & \dataneeded{} & \dataneeded{} \\
+G7 (ICC, proxy$\leftrightarrow$retrain $\rho$) & \dataneeded{} & \dataneeded{} \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{figure}[t]
+\centering
+\fbox{\parbox{0.9\linewidth}{\centering\dataneeded{Figure placeholder.}
+(i) The R0 permutation null of the cross-fit $\mathrm{partial\text{-}}R^2_T$ with the
+observed statistic and BCa CI marked; (ii) the R1 forest plot of per-control bootstrap-$t$
+lower bounds $L_c(\alpha)$ against $\delta_{R1}$ with the binding control highlighted.
+Rendered after the authorized run.}}
+\caption{\dataneeded{R0/R1 inference visualizations} (no data at Stage-1).}
+\label{fig:perm}
+\end{figure}
+
+% =====================================================================
+\section{Limitations}
+\label{sec:limitations}
+% =====================================================================
+\begin{enumerate}[leftmargin=1.5em,itemsep=2pt]
+\item \textbf{The residual attribution may be null (R0).} If $[\phend,\mathrm{NAIT}(\Lset)]$
+already explains the variance, R0 does not reject and the novelty claim stops. This is the
+intended falsifier; the honest prior is that the residual may be small.
+\item \textbf{Routing may not beat uniform/AdaLoRA (R1 null).} R1 is a pre-registered
+policy-value kill-gate with a clean fallback (drop routing, keep selection-only). Publishable
+either way.
+\item \textbf{$\psivec$ is predictive, not causal.} $\psivec$ only \emph{proposes} the
+policy; the policy value $\Vpol(\pi_\psi)$ (real runs, once executed) would certify it. Ridge/fold instability
+that moves $\psivec$ mass without changing prediction fails the $\pi_{\mathrm{shuf}}$ arm.
+\item \textbf{No per-example routing effect is claimed.} The estimand is a run-level policy
+value; the only per-layer notion is the descriptive $\Delta_\ell^{\mathrm{LOL}}$, labeled
+non-causal and outside the confirmatory $\alpha$.
+\item \textbf{Scope is the locked pools.} $\Vpol(\pi)$ is the pool-conditional
+seed-expectation; the pool-marginal statement requires the separate, non-confirmatory
+multi-pool probe with its own multiplicity.
+\item \textbf{Per-contrast inference is asymptotic.} We claim only the asymptotic validity of
+the paired studentized bootstrap-$t$; the exact-finite-$S$ sign-flip claim is withdrawn, and
+the one route to exactness (an actual seed-to-arm randomization) is not adopted.
+\item \textbf{Compute matching is fragile.} The ledger requires \emph{measured} FLOP/wall-clock
+equality and a skip-flag; unmatched arms are diagnostic-labeled and ``savings'' is forbidden
+without a measured reduction. Equal rank is not equal compute.
+\item \textbf{Off-manifold $J$.} The layer-ablation profile is validated-or-dropped against a
+real anchor layer-freeze policy-value difference.
+\item \textbf{Factuality proxy validity is a precondition, not a result.} Brier proves
+calibration, not eval-drift prediction; fail G6 $\Rightarrow\lambda_f:=0$.
+\item \textbf{The outcome $Y$ is anchored on the endpoint signature.} The LOCI clusters that
+define $Y$ are fit on the L2-normalized endpoint signature $\phend$ (Eq.~15)---the same
+\emph{full} control that $\psivec$ residualizes against. This is a construct-validity risk: an
+outcome partitioned by $\phend$ could share variance with an endpoint-anchored selection in a
+way that flatters $\psivec$. We do not claim the $0.3/0.6$ G7 floors (Spearman
+$\rho(Y,\Delta_{\mathrm{retrain}})$ and ICC$(2,1)$, with lower-CI $>0$) \emph{guarantee}
+substantive proxy validity; they are necessary preconditions, not a certificate, and a reviewer
+may legitimately argue the floors are too lax. On G7 failure the influence proxy is dropped for
+the direct retrain-delta $Y$ (diagnostic), so the headline never rests on an unvalidated proxy.
+\item \textbf{Influence approximation.} First-order LOCI influence can be inaccurate for large
+moves; G7 is the explicit precondition---fail $\Rightarrow$ no primary claim on the proxy.
+\item \textbf{No empirical claim yet.} Every result is design; the only numeric checks are the
+green-harness formula evaluations, which are code-correctness, not evidence.
+\item \textbf{The fully-identified claim is narrower than the novel one (the central
+exposure).} What R1 identifies and pre-registers is \emph{a particular routing policy beats
+its capacity-matched controls given a fixed selection}; the strictly causal, load-bearing
+reading of the coupling---``one shared vector, used as both the selection sum and the routing
+support, is what carries the gain''---is \emph{not} point-identified by this design and we do
+not claim it. We are explicit that this is a deliberate de-scoping, not an oversight: a hostile
+reviewer can fairly hold that the identified result is incremental over AdaLoRA/surgical/NAIT,
+while the genuinely novel coupling claim is exactly the one we decline to certify. We do not
+treat this as resolved by construction. We mitigate, but do not close, the gap on two fronts.
+First, $\pi_{\mathrm{shuf}}$ is a genuine (if partial) coupling probe: it breaks the
+layer$\leftrightarrow$example correspondence while preserving the $\psivec$ marginal, so if the
+per-example structure of $\psivec$ (not merely its marginal) is load-bearing, $\pi_{\mathrm{shuf}}$
+should lose---this tests a meaningful fraction of the coupling claim, though it does not isolate
+``one vector versus two.'' Second, R0 residualizes against the \emph{wide}
+$[\phend,\mathrm{NAIT}(\Lset)]$ control, making the novelty test anti-conservative against
+ourselves, so a passing R0 is meaningful and a failing R0 triggers the honest ``reduces to NAIT,
+report clean null'' fallback. The residual risk is therefore one of
+\emph{significance/identifiability of the interesting claim}, not of soundness: the design is
+sound and the falsifiable claim it does make is identified, but whether reviewers credit the
+de-scoped contribution as sufficiently novel is venue- and disposition-dependent, and we do not
+assert otherwise.
+\end{enumerate}
+
+% =====================================================================
+\section{Conclusion}
+\label{sec:conclusion}
+% =====================================================================
+We presented LATTICE-R, a Stage-1 Registered Report that turns the per-layer axis NAIT
+computes-and-discards into a decision variable: one endpoint+NAIT-residualized trajectory
+attribution drives both data selection (its sum) and LoRA layer routing (its support), tied
+by an exact coupling identity. We make the routing object a well-posed, fully-specified
+\emph{pool-conditional policy value} over whole training runs---no per-example potential
+outcome, no SUTVA, a score-free closed-form capacity map, and deterministic
+controls---and the design \emph{would certify} the coupling, once the authorized run
+executes, with an interventional routing test (six real masked-LoRA arms, an
+intersection-union test over a paired bootstrap-$t$). A ridge-FWL mechanism certificate
+residualized against NAIT over the full $\Lset$, a measured compute ledger, a locked
+three-pool firewall, and a closed-testing graph with an in-document FWER bound complete
+the plan. The theory is discharged where provable and the modules are
+implemented as do-not-run pure-Python with a green 93-test harness
+(\texttt{server.authorized=false}; no run executed). \textbf{Empirical validation follows
+the authorized run}; no experimental numbers are claimed here, and a null at any gate is a
+clean, publishable falsification.
+
+\bibliographystyle{plain}
+\bibliography{references}
+
+\end{document}

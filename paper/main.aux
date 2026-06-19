@@ -1,0 +1,217 @@
+\relax 
+\providecommand\hyper@newdestlabel[2]{}
+\providecommand\HyField@AuxAddToFields[1]{}
+\providecommand\HyField@AuxAddToCoFields[2]{}
+\citation{zhou2023lima}
+\citation{cao2023instruction}
+\citation{nait2026}
+\citation{diddee2024chasing}
+\@writefile{toc}{\contentsline {section}{\numberline {1}Introduction}{1}{section.1}\protected@file@percent }
+\newlabel{sec:intro}{{1}{1}{Introduction}{section.1}{}}
+\@writefile{toc}{\contentsline {paragraph}{The gap.}{1}{section*.1}\protected@file@percent }
+\citation{berger1982iut}
+\@writefile{toc}{\contentsline {paragraph}{Why this is hard to do honestly.}{2}{section*.2}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{Our approach (LATTICE-R).}{2}{section*.3}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{Position relative to NAIT, in one line.}{2}{section*.4}\protected@file@percent }
+\citation{chambers2014registered}
+\@writefile{toc}{\contentsline {paragraph}{Falsifiable central claim.}{3}{section*.5}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{Contributions.}{3}{section*.6}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{Registered-Report status and implementation status.}{3}{section*.7}\protected@file@percent }
+\citation{nait2026}
+\citation{cao2023instruction}
+\citation{zhou2023lima}
+\citation{xie2023dsir}
+\citation{koh2017influence}
+\citation{pruthi2020tracin}
+\citation{xia2024less}
+\citation{xia2024less}
+\citation{pruthi2020tracin}
+\citation{diddee2024chasing}
+\citation{sener2018coreset}
+\citation{zhang2023adalora}
+\citation{lee2023surgical}
+\citation{xu2024neft}
+\citation{frisch1933partial}
+\citation{lovell1963seasonal}
+\citation{chernozhukov2018double}
+\citation{hoerl1970ridge}
+\citation{good2005permutation}
+\citation{efron1993bootstrap}
+\citation{hall1988bootstrap}
+\citation{efron1987bca}
+\citation{berger1982iut}
+\citation{bretz2009graphical}
+\citation{holm1979simple}
+\citation{brier1950verification}
+\citation{gneiting2007strictly}
+\citation{guo2017calibration}
+\citation{shrout1979intraclass}
+\citation{kirkpatrick2017ewc}
+\citation{nemhauser1978submodular}
+\citation{minoux1978accelerated}
+\citation{wei2015submodular}
+\citation{bonneel2015sliced}
+\citation{kolouri2019gsw}
+\citation{villani2009optimal}
+\citation{gretton2012mmd}
+\citation{hu2022lora}
+\citation{elhage2021mathematical}
+\@writefile{toc}{\contentsline {section}{\numberline {2}Related Work}{4}{section.2}\protected@file@percent }
+\newlabel{sec:related}{{2}{4}{Related Work}{section.2}{}}
+\@writefile{toc}{\contentsline {paragraph}{Position relative to the base paper (NAIT).}{4}{section*.8}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{Instruction-tuning data selection (and its threat model).}{4}{section*.9}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{Layer-/neuron-selective and rank-adaptive tuning (the routing prior art).}{4}{section*.10}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{Inference, distances, calibration, and submodular selection.}{4}{section*.11}\protected@file@percent }
+\@writefile{toc}{\contentsline {section}{\numberline {3}Method}{5}{section.3}\protected@file@percent }
+\newlabel{sec:method}{{3}{5}{Method}{section.3}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {3.1}Notation and the faithful NAIT baseline}{5}{subsection.3.1}\protected@file@percent }
+\newlabel{eq:phiend}{{1}{5}{Notation and the faithful NAIT baseline}{equation.1}{}}
+\newlabel{eq:nait}{{2}{5}{Notation and the faithful NAIT baseline}{equation.2}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {3.2}Trajectory operator}{5}{subsection.3.2}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{Distributional term $D_\ell $ (higher moments).}{5}{section*.12}\protected@file@percent }
+\newlabel{eq:sw2}{{3}{5}{Distributional term $D_\ell $ (higher moments)}{equation.3}{}}
+\@writefile{toc}{\contentsline {paragraph}{Temporal curvature $\kappa _\ell $ (uses ordering).}{6}{section*.13}\protected@file@percent }
+\newlabel{eq:curv}{{4}{6}{Temporal curvature $\kappa _\ell $ (uses ordering)}{equation.4}{}}
+\newlabel{eq:T}{{5}{6}{Temporal curvature $\kappa _\ell $ (uses ordering)}{equation.5}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {3.3}Endpoint+NAIT-residualized attribution and the frozen out-of-sample map}{6}{subsection.3.3}\protected@file@percent }
+\newlabel{sec:residual}{{3.3}{6}{Endpoint+NAIT-residualized attribution and the frozen out-of-sample map}{subsection.3.3}{}}
+\newlabel{eq:Z}{{6}{6}{Endpoint+NAIT-residualized attribution and the frozen out-of-sample map}{equation.6}{}}
+\newlabel{eq:Blam}{{7}{6}{Endpoint+NAIT-residualized attribution and the frozen out-of-sample map}{equation.7}{}}
+\newlabel{eq:resid}{{8}{6}{Endpoint+NAIT-residualized attribution and the frozen out-of-sample map}{equation.8}{}}
+\newlabel{eq:beta}{{9}{6}{Endpoint+NAIT-residualized attribution and the frozen out-of-sample map}{equation.9}{}}
+\@writefile{toc}{\contentsline {paragraph}{Per-layer policy score and the coupling identity.}{6}{section*.14}\protected@file@percent }
+\newlabel{eq:psi}{{10}{6}{Per-layer policy score and the coupling identity}{equation.10}{}}
+\newlabel{lem:couple}{{1}{6}{Coupling identity}{lemma.1}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {3.4}The routing policy and the fully-specified mask$\to $rank map}{7}{subsection.3.4}\protected@file@percent }
+\newlabel{sec:policy}{{3.4}{7}{The routing policy and the fully-specified mask$\to $rank map}{subsection.3.4}{}}
+\newlabel{eq:pol}{{11}{7}{The routing policy and the fully-specified mask$\to $rank map}{equation.11}{}}
+\newlabel{lem:feas}{{2}{7}{Feasibility / no-overflow; $\texttt {capacity\_match}$ is total and conserving on $\mathrm {DOM}$}{lemma.2}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {3.5}The pool-conditional policy value and the kill-gates}{7}{subsection.3.5}\protected@file@percent }
+\newlabel{sec:gates}{{3.5}{7}{The pool-conditional policy value and the kill-gates}{subsection.3.5}{}}
+\newlabel{eq:V}{{12}{7}{The pool-conditional policy value and the kill-gates}{equation.12}{}}
+\@writefile{toc}{\contentsline {paragraph}{Gate R0 (mechanism certificate; \texttt  {analysis/residual\_test.py}).}{7}{section*.15}\protected@file@percent }
+\citation{berger1982iut}
+\citation{hall1988bootstrap}
+\@writefile{toc}{\contentsline {paragraph}{Gate R1 (interventional routing certificate; \texttt  {analysis/routing\_intervention.py}).}{8}{section*.16}\protected@file@percent }
+\newlabel{eq:iutnull}{{13}{8}{Gate R1 (interventional routing certificate; \texttt {analysis/routing\_intervention.py})}{equation.13}{}}
+\@writefile{toc}{\contentsline {paragraph}{Gate R2 (compute-matched method win; \texttt  {analysis/matched\_budget.py}).}{8}{section*.17}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{Gate R3 (honest two-sided cost).}{8}{section*.18}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{Descriptive per-layer notion (not causal).}{8}{section*.19}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {3.6}Valid inference for the mechanism certificate and the ``beats all'' maxima}{8}{subsection.3.6}\protected@file@percent }
+\newlabel{sec:inference}{{3.6}{8}{Valid inference for the mechanism certificate and the ``beats all'' maxima}{subsection.3.6}{}}
+\newlabel{eq:Lc}{{14}{8}{Valid inference for the mechanism certificate and the ``beats all'' maxima}{equation.14}{}}
+\citation{frisch1933partial}
+\citation{lovell1963seasonal}
+\citation{hoerl1970ridge}
+\@writefile{toc}{\contentsline {section}{\numberline {4}Theory}{9}{section.4}\protected@file@percent }
+\newlabel{sec:theory}{{4}{9}{Theory}{section.4}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {4.1}Strict propriety of the Brier factuality calibrator}{9}{subsection.4.1}\protected@file@percent }
+\newlabel{thm:brier}{{1}{9}{Strict propriety}{theorem.1}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {4.2}Dual feasibility of the frozen residual maker}{9}{subsection.4.2}\protected@file@percent }
+\newlabel{thm:dual}{{2}{9}{Dual equivalence and out-of-sample feasibility}{theorem.2}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {4.3}Residual orthogonality}{9}{subsection.4.3}\protected@file@percent }
+\newlabel{lem:resid}{{3}{9}{The residual estimand is orthogonal to the endpoint/NAIT geometry}{lemma.3}{}}
+\citation{hall1988bootstrap}
+\citation{bretz2009graphical}
+\@writefile{toc}{\contentsline {subsection}{\numberline {4.4}First-moment pooling is provably insufficient}{10}{subsection.4.4}\protected@file@percent }
+\newlabel{prop:curv}{{1}{10}{Curvature is not a function of the first-moment pool}{proposition.1}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {4.5}The intersection-union test is exact conditional on valid component tests}{10}{subsection.4.5}\protected@file@percent }
+\newlabel{prop:iut}{{2}{10}{IUT size; Berger 1982}{proposition.2}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {4.6}Closed-testing FWER on the corrected leaves}{10}{subsection.4.6}\protected@file@percent }
+\newlabel{thm:fwer}{{3}{10}{FWER bound}{theorem.3}{}}
+\citation{nemhauser1978submodular}
+\citation{minoux1978accelerated}
+\citation{qwen2025}
+\citation{hu2022lora}
+\citation{yu2024metamath}
+\citation{glaive2023codeassistant}
+\citation{yang2018hotpotqa}
+\citation{hendrycks2021mmlu}
+\citation{lin2022truthfulqa}
+\citation{min2023factscore}
+\citation{xia2024less}
+\citation{lee2023surgical}
+\citation{zhang2023adalora}
+\citation{xu2024neft}
+\@writefile{toc}{\contentsline {subsection}{\numberline {4.7}Selection objective: monotone-submodular $(1-1/e)$ guarantee}{11}{subsection.4.7}\protected@file@percent }
+\newlabel{thm:submod}{{4}{11}{Greedy approximation}{theorem.4}{}}
+\@writefile{toc}{\contentsline {section}{\numberline {5}Experimental Setup (Pre-Registered Analysis Plan)}{11}{section.5}\protected@file@percent }
+\newlabel{sec:setup}{{5}{11}{Experimental Setup (Pre-Registered Analysis Plan)}{section.5}{}}
+\@writefile{toc}{\contentsline {paragraph}{Backbones (pinned, released checkpoints).}{11}{section*.20}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{Datasets (pinned identities; content hashes resolved at authorization).}{11}{section*.21}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{Three-pool leakage firewall (\texttt  {analysis/pool\_firewall.py}).}{11}{section*.22}\protected@file@percent }
+\citation{bretz2009graphical}
+\citation{guo2017calibration}
+\citation{shrout1979intraclass}
+\@writefile{toc}{\contentsline {paragraph}{Baselines and routing arms (locked).}{12}{section*.23}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{Multiplicity (closed-testing graph, FWER $\alpha =0.05$).}{12}{section*.24}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{Precondition gates.}{12}{section*.25}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{Measured compute ledger (\texttt  {cost\_model.py}).}{12}{section*.26}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{Locked symbols, thresholds, and seeds (pre-registered design choices).}{12}{section*.27}\protected@file@percent }
+\@writefile{lot}{\contentsline {table}{\numberline {1}{\ignorespaces Implemented v5 modules (do-not-run, pure-Python; green harness, no run executed). Status is \emph  {implemented \& unit-tested}, \emph  {not} executed.}}{13}{table.1}\protected@file@percent }
+\newlabel{tab:modules}{{1}{13}{Implemented v5 modules (do-not-run, pure-Python; green harness, no run executed). Status is \emph {implemented \& unit-tested}, \emph {not} executed}{table.1}{}}
+\@writefile{toc}{\contentsline {paragraph}{Implementation status and the green unit harness.}{13}{section*.28}\protected@file@percent }
+\@writefile{toc}{\contentsline {section}{\numberline {6}Results}{13}{section.6}\protected@file@percent }
+\newlabel{sec:results}{{6}{13}{Results}{section.6}{}}
+\@writefile{lot}{\contentsline {table}{\numberline {2}{\ignorespaces \textcolor {red}{\textbf  {[DATA\_NEEDED]}}~\emph  {Gate R0 --- mechanism certificate.} Per backbone/family: median-of-folds $\mathrm  {partial\text  {-}}R^2_T$ and $\Delta R^2_{\mathrm  {overall}}$ under the full $[\bm  {\phi }_{\mathrm  {end}},\mathrm  {NAIT}(\mathcal  {L})]$ control, conditional-null block-permutation $p$ ($P{=}5000$), cluster BCa $95\%$ CI ($B{=}2000$), decision vs.\ the locked floor.}}{14}{table.2}\protected@file@percent }
+\newlabel{tab:r0}{{2}{14}{\dataneeded {Gate R0 --- mechanism certificate.} Per backbone/family: median-of-folds $\mathrm {partial\text {-}}R^2_T$ and $\Delta R^2_{\mathrm {overall}}$ under the full $[\phend ,\mathrm {NAIT}(\Lset )]$ control, conditional-null block-permutation $p$ ($P{=}5000$), cluster BCa $95\%$ CI ($B{=}2000$), decision vs.\ the locked floor}{table.2}{}}
+\@writefile{lot}{\contentsline {table}{\numberline {3}{\ignorespaces \textcolor {red}{\textbf  {[DATA\_NEEDED]}}~\emph  {Gate R1 --- interventional routing certificate (the headline mechanism).} Per-control pool-conditional gap $\hat  g_c$, paired bootstrap-$t$ lower bound $L_c(\alpha )$ vs.\ $\delta _{R1}$, and per-control reject; the IUT rejects iff every $L_c(\alpha )>\delta _{R1}$, with the simultaneous bound $L_{R1}=\min _c L_c(\alpha )$ ($S\ge 20$ seeds, compute-matched).}}{14}{table.3}\protected@file@percent }
+\newlabel{tab:r1}{{3}{14}{\dataneeded {Gate R1 --- interventional routing certificate (the headline mechanism).} Per-control pool-conditional gap $\hat g_c$, paired bootstrap-$t$ lower bound $L_c(\alpha )$ vs.\ $\delta _{R1}$, and per-control reject; the IUT rejects iff every $L_c(\alpha )>\delta _{R1}$, with the simultaneous bound $L_{R1}=\min _c L_c(\alpha )$ ($S\ge 20$ seeds, compute-matched)}{table.3}{}}
+\@writefile{toc}{\contentsline {section}{\numberline {7}Limitations}{14}{section.7}\protected@file@percent }
+\newlabel{sec:limitations}{{7}{14}{Limitations}{section.7}{}}
+\@writefile{lot}{\contentsline {table}{\numberline {4}{\ignorespaces \textcolor {red}{\textbf  {[DATA\_NEEDED]}}~\emph  {Gate R2 --- compute-matched method win vs.\ NAIT and the baseline set.} Relative target gain, retention-adjusted gain, retention drift, hallucination drift, and the ledger-match decision over $\ge 20$ seeds; R2-target is the IUT over the baseline set ($\delta _{\mathrm  {target}}$); each drift/cost sub-claim is a one-sided margin test.}}{15}{table.4}\protected@file@percent }
+\newlabel{tab:r2}{{4}{15}{\dataneeded {Gate R2 --- compute-matched method win vs.\ NAIT and the baseline set.} Relative target gain, retention-adjusted gain, retention drift, hallucination drift, and the ledger-match decision over $\ge 20$ seeds; R2-target is the IUT over the baseline set ($\delta _{\mathrm {target}}$); each drift/cost sub-claim is a one-sided margin test}{table.4}{}}
+\@writefile{lot}{\contentsline {table}{\numberline {5}{\ignorespaces \textcolor {red}{\textbf  {[DATA\_NEEDED]}}~\emph  {Honest cost ledger (Gate R3) and precondition gates G6/G7.} Per-pool selection multiplier; differential trajectory extraction/storage I/O; amortized validation ($R{=}1$, break-even $R^\star $); the extraction-parity decision vs.\ $2.0\times $; and the realized G6 (Spearman/Pearson/ECE) and G7 (ICC, proxy$\leftrightarrow $retrain $\rho $) values.}}{15}{table.5}\protected@file@percent }
+\newlabel{tab:cost}{{5}{15}{\dataneeded {Honest cost ledger (Gate R3) and precondition gates G6/G7.} Per-pool selection multiplier; differential trajectory extraction/storage I/O; amortized validation ($R{=}1$, break-even $R^\star $); the extraction-parity decision vs.\ $2.0\times $; and the realized G6 (Spearman/Pearson/ECE) and G7 (ICC, proxy$\leftrightarrow $retrain $\rho $) values}{table.5}{}}
+\@writefile{toc}{\contentsline {section}{\numberline {8}Conclusion}{15}{section.8}\protected@file@percent }
+\newlabel{sec:conclusion}{{8}{15}{Conclusion}{section.8}{}}
+\bibstyle{plain}
+\bibdata{references}
+\bibcite{berger1982iut}{1}
+\bibcite{bonneel2015sliced}{2}
+\bibcite{bretz2009graphical}{3}
+\bibcite{brier1950verification}{4}
+\bibcite{cao2023instruction}{5}
+\bibcite{chambers2014registered}{6}
+\bibcite{nait2026}{7}
+\bibcite{chernozhukov2018double}{8}
+\bibcite{diddee2024chasing}{9}
+\bibcite{efron1987bca}{10}
+\bibcite{efron1993bootstrap}{11}
+\@writefile{lof}{\contentsline {figure}{\numberline {1}{\ignorespaces \textcolor {red}{\textbf  {[DATA\_NEEDED]}}~\emph  {R0/R1 inference visualizations} (no data at Stage-1).}}{16}{figure.1}\protected@file@percent }
+\newlabel{fig:perm}{{1}{16}{\dataneeded {R0/R1 inference visualizations} (no data at Stage-1)}{figure.1}{}}
+\bibcite{elhage2021mathematical}{12}
+\bibcite{frisch1933partial}{13}
+\bibcite{glaive2023codeassistant}{14}
+\bibcite{gneiting2007strictly}{15}
+\bibcite{good2005permutation}{16}
+\bibcite{gretton2012mmd}{17}
+\bibcite{guo2017calibration}{18}
+\bibcite{hall1988bootstrap}{19}
+\bibcite{hendrycks2021mmlu}{20}
+\bibcite{hoerl1970ridge}{21}
+\bibcite{holm1979simple}{22}
+\bibcite{hu2022lora}{23}
+\bibcite{kirkpatrick2017ewc}{24}
+\bibcite{koh2017influence}{25}
+\bibcite{kolouri2019gsw}{26}
+\bibcite{lee2023surgical}{27}
+\bibcite{lin2022truthfulqa}{28}
+\bibcite{lovell1963seasonal}{29}
+\bibcite{min2023factscore}{30}
+\bibcite{minoux1978accelerated}{31}
+\bibcite{nemhauser1978submodular}{32}
+\bibcite{pruthi2020tracin}{33}
+\bibcite{qwen2025}{34}
+\bibcite{sener2018coreset}{35}
+\bibcite{shrout1979intraclass}{36}
+\bibcite{villani2009optimal}{37}
+\bibcite{wei2015submodular}{38}
+\bibcite{xia2024less}{39}
+\bibcite{xie2023dsir}{40}
+\bibcite{xu2024neft}{41}
+\bibcite{yang2018hotpotqa}{42}
+\bibcite{yu2024metamath}{43}
+\bibcite{zhang2023adalora}{44}
+\bibcite{zhou2023lima}{45}
+\gdef \@abspage@last{19}

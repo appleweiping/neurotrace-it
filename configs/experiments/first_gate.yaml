@@ -38,26 +38,41 @@ metrics:
   cost:
     - selection_cost_hours
     - training_cost_hours
+# GATES SYNCED TO THE v5 LOCKED THRESHOLDS (C+D hardening, 2026-06-19).
+# Binding source of the locked decision thresholds: configs/experiments/lattice_v5.yaml
+# + docs/redesign/REDESIGN_v5.md (§5.6); where this file and lattice_v5.yaml ever
+# disagree, lattice_v5.yaml governs. Legacy v4-era values (0.02/0.03/0.01/2.0x) are
+# SUPERSEDED. Margins are on the normalized [0,1] utility scale; the cost gate is a
+# relative training-compute overhead ceiling. Pre-registered DESIGN CHOICES, not results.
+binding_source: configs/experiments/lattice_v5.yaml
 gates:
-  trajectory_endpoint_margin:
+  trajectory_endpoint_margin:                 # delta_R1 (was 0.02)
     metric: trajectory_adjusted_score_minus_endpoint_adjusted_score
-    threshold: 0.02
+    threshold: 0.01
     failure_action: stop_main_novelty_claim
-  target_or_adjusted_relative_gain:
+  target_or_adjusted_relative_gain:           # delta_target (was 0.03)
     metric: target_score_or_retention_adjusted_score
-    threshold: 0.03
+    threshold: 0.01
     failure_action: downgrade_to_diagnostic
-  max_retention_drift_abs:
+  max_retention_drift_abs:                    # delta_ret (was 0.01)
     metric: aggregate_retention_score_drop
-    threshold: 0.01
+    threshold: 0.02
     failure_action: forbid_reliability_claim
-  max_hallucination_drift_abs:
+  max_hallucination_drift_abs:                # delta_hall (was 0.01)
     metric: factuality_error_rate_increase
-    threshold: 0.01
+    threshold: 0.02
     failure_action: forbid_safety_claim
-  max_selection_cost_multiplier:
+  max_cost_overhead_rel:                      # delta_cost (5% rel; replaces 2.0x)
+    metric: relative_training_compute_overhead_vs_matched_reference
+    threshold: 0.05
+    failure_action: require_efficiency_ablation
+  max_selection_cost_multiplier_superseded:   # legacy v4 gate, kept for provenance
     metric: selection_cost_vs_endpoint_neuron_selection
     threshold: 2.0
     failure_action: require_efficiency_ablation
+  floor_partial:                              # Gate-R0 partial-R^2 floor
+    metric: cluster_bca_lower_bound_partial_r2
+    threshold: 0.01
+    failure_action: stop_main_novelty_claim
 server:
   authorized: false

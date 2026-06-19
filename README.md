@@ -41,7 +41,34 @@ Smoke tests in this repository are only contract tests.
 
 ## Current Status
 
-The non-server initialization package is complete for handoff: see
-`docs/active_todo.md`, `docs/milestones.md`, `docs/paper_claims_status.md`,
-and `docs/definition_of_done.md`. The next real gate is ARIS experiment-plan
-review of the trajectory-signature and endpoint-baseline comparison design.
+The Stage-1 Registered-Report design is locked at **REDESIGN_v5 (LATTICE-R)**
+(`docs/redesign/REDESIGN_v5.md`), which elevates the v4 core to a *coupled
+selection-and-routing* method: one endpoint+NAIT-residualized trajectory attribution
+`psi(x)` drives both data selection (its sum) and LoRA layer routing (its support),
+tied by the coupling identity `sum_{l in A} psi_l = beta_T . T_tilde`. The routing
+object is a well-posed **pool-conditional policy value** `V(pi)` over whole training
+runs (no per-example potential outcome, no SUTVA), decided by an **intersection-union
+test** over a paired studentized bootstrap-`t`, inside a closed-testing graph with an
+in-document FWER bound.
+
+The novel-core pipeline is **implemented and frozen** as pure-stdlib,
+build-now/run-later modules (no model load, no server call, no training): the faithful
+NAIT baseline over the full released layer set `L`, the trajectory operator (SW2 `D`,
+curvature `kappa`), the frozen out-of-sample nuisance map and the residualized
+attribution `psi` + coupling identity, the score-free `capacity_match` rank map and
+deterministic control policies, the policy-value / IUT routing test, the matched-budget
+comparison, the closed-testing graph, the three-pool firewall, the LOCI utility outcome +
+reliability gate, the Brier calibrator + factuality gate, and the V2 auditable signature
+record. These are exercised by a **green 93-test harness** (`python -m pytest -q`).
+**Pre-registered decision thresholds are now LOCKED** as design choices in
+`configs/experiments/lattice_v5.yaml` (margins `delta_R1`/`delta_target`, capacity
+`R_tot`/`r_max`/`r_0`, control seeds, the closed-testing alpha allocation, the partial-R^2
+floor, etc.); only genuinely empirical results remain `DATA_NEEDED`. The theory is
+**discharged where proved**, and the conference paper lives in `paper/main.tex`
+(+ `paper/references.bib`). The operational hand-off is `reports/run_packet.md`. See also
+`docs/active_todo.md`, `docs/milestones.md`, `docs/paper_claims_status.md`, and
+`docs/definition_of_done.md`. **The only remaining gate is the authorized GPU run
+(training / activation extraction / evaluation), which is deferred:
+`server.authorized` stays false and no empirical claim is made until it executes;** the
+entrypoints' authorized branches are guarded stubs, so the training body is wired and
+specified but not yet coded.

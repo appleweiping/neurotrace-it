@@ -1,0 +1,491 @@
+% references.bib -- NeuroTrace-IT / LATTICE Stage-1 Registered Report.
+%
+% Citation hygiene (REDESIGN_v4 sec 1.4, fix f3): cite ONLY papers we are
+% confident exist (the NAIT base paper + classic, well-established references). We
+% do NOT fabricate arXiv identifiers. Every entry's venue/ID has been confirmed (see
+% the verification pass below); the provisional verify-before-camera-ready markers
+% that previously flagged unconfirmed records have all been resolved and removed
+% (C+D hardening round 2, 2026-06-19). The diversity-coreset id (2605.26004) is a REAL
+% paper but a multimodal/VLM coreset method (MAGIC), not a text instruction-tuning
+% anchor; it is deliberately NOT cited as a must-beat anchor (re-characterized and
+% demoted in configs/baselines/baseline_registry.yaml).
+%
+% Verification pass 2026-06-19 (C+D hardening): NAIT author list, Diddee/Ippolito
+% venue (Findings of NAACL 2025, 2025.findings-naacl.103), AdaLoRA author list
+% (+Karampatziakis), NeFT COLING 2025 record (2025.coling-main.630, +Yingpeng Ma),
+% Gretton MMD as a JMLR journal entry, Qwen2.5 (arXiv:2412.15115), and the Shazeer
+% MoE replacement (arXiv:1701.06538) all checked via arXiv/ACL Anthology/OpenReview.
+% (NOTE: an "at-sign" immediately followed by an entry-type word is avoided in these
+% comments because BibTeX treats any at-sign in inter-entry text as the start of an
+% entry and aborts the parse with "I was expecting an =".)
+
+% ---------------------------------------------------------------------------
+% Base method (must-cite / must-beat). The arXiv id is the registry value; the
+% author list, arXiv id, and OpenReview forum were verified against arXiv and
+% OpenReview on 2026-06-19 (see the note field).
+% ---------------------------------------------------------------------------
+@inproceedings{nait2026,
+  title     = {Neuron-Aware Data Selection in Instruction Tuning for Large Language Models},
+  author    = {Chen, Xin and Wu, Junchao and Yang, Shu and Zhan, Runzhe and Wu, Zeyu and Yang, Min and Huang, Shujian and Chao, Lidia S. and Wong, Derek F.},
+  booktitle = {Proceedings of the International Conference on Learning Representations (ICLR)},
+  year      = {2026},
+  note      = {arXiv:2603.13201; OpenReview \url{https://openreview.net/forum?id=uq6UWRgzMr}. Author list verified against arXiv/OpenReview 2026-06-19},
+}
+
+% ---------------------------------------------------------------------------
+% Instruction tuning, alignment, and data quality
+% ---------------------------------------------------------------------------
+@article{wei2022finetuned,
+  title   = {Finetuned Language Models Are Zero-Shot Learners},
+  author  = {Wei, Jason and Bosma, Maarten and Zhao, Vincent Y. and Guu, Kelvin and Yu, Adams Wei and Lester, Brian and Du, Nan and Dai, Andrew M. and Le, Quoc V.},
+  journal = {International Conference on Learning Representations (ICLR)},
+  year    = {2022},
+}
+
+@inproceedings{ouyang2022instructgpt,
+  title     = {Training Language Models to Follow Instructions with Human Feedback},
+  author    = {Ouyang, Long and Wu, Jeffrey and Jiang, Xu and Almeida, Diogo and Wainwright, Carroll L. and Mishkin, Pamela and Zhang, Chong and Agarwal, Sandhini and Slama, Katarina and Ray, Alex and others},
+  booktitle = {Advances in Neural Information Processing Systems (NeurIPS)},
+  year      = {2022},
+}
+
+@inproceedings{zhou2023lima,
+  title     = {{LIMA}: Less Is More for Alignment},
+  author    = {Zhou, Chunting and Liu, Pengfei and Xu, Puxin and Iyer, Srinivasan and Sun, Jiao and Mao, Yuning and Ma, Xuezhe and Efrat, Avia and Yu, Ping and Yu, Lili and Zhang, Susan and Ghosh, Gargi and Lewis, Mike and Zettlemoyer, Luke and Levy, Omer},
+  booktitle = {Advances in Neural Information Processing Systems (NeurIPS)},
+  year      = {2023},
+}
+
+@inproceedings{cao2023instruction,
+  title     = {Instruction Mining: Instruction Data Selection for Tuning Large Language Models},
+  author    = {Cao, Yihan and Kang, Yanbin and Wang, Chi and Sun, Lichao},
+  booktitle = {Conference on Language Modeling (COLM)},
+  year      = {2024},
+  note      = {arXiv:2307.06290. Venue/year verified 2026-06-19},
+}
+
+@inproceedings{xie2023dsir,
+  title     = {Data Selection for Language Models via Importance Resampling},
+  author    = {Xie, Sang Michael and Santurkar, Shibani and Ma, Tengyu and Liang, Percy},
+  booktitle = {Advances in Neural Information Processing Systems (NeurIPS)},
+  year      = {2023},
+}
+
+% ---------------------------------------------------------------------------
+% Influence / gradient-based data attribution and selection
+% ---------------------------------------------------------------------------
+@inproceedings{koh2017influence,
+  title     = {Understanding Black-box Predictions via Influence Functions},
+  author    = {Koh, Pang Wei and Liang, Percy},
+  booktitle = {International Conference on Machine Learning (ICML)},
+  year      = {2017},
+}
+
+@inproceedings{pruthi2020tracin,
+  title     = {Estimating Training Data Influence by Tracing Gradient Descent},
+  author    = {Pruthi, Garima and Liu, Frederick and Kale, Satyen and Sundararajan, Mukund},
+  booktitle = {Advances in Neural Information Processing Systems (NeurIPS)},
+  year      = {2020},
+}
+
+@inproceedings{xia2024less,
+  title     = {{LESS}: Selecting Influential Data for Targeted Instruction Tuning},
+  author    = {Xia, Mengzhou and Malladi, Sadhika and Gururangan, Suchin and Arora, Sanjeev and Chen, Danqi},
+  booktitle = {International Conference on Machine Learning (ICML)},
+  year      = {2024},
+  note      = {arXiv:2402.04333},
+}
+
+% The threat model v5 adopts: selectors generalize poorly and often fail to beat a
+% random baseline, with selection cost sometimes exceeding full fine-tuning. Every
+% R2 comparator (random, full-data, gradient-rep) is therefore a required baseline.
+@inproceedings{diddee2024chasing,
+  title     = {Chasing Random: Instruction Selection Strategies Fail to Generalize},
+  author    = {Diddee, Harshita and Ippolito, Daphne},
+  booktitle = {Findings of the Association for Computational Linguistics: NAACL 2025},
+  pages     = {1943--1957},
+  year      = {2025},
+  note      = {ACL Anthology 2025.findings-naacl.103; arXiv:2410.15225. Verified 2026-06-19},
+}
+
+% ---------------------------------------------------------------------------
+% Layer-/neuron-selective and rank-adaptive tuning (the routing prior art the
+% R1 policy-value arms must beat: AdaLoRA, surgical, NeFT).
+% ---------------------------------------------------------------------------
+@inproceedings{zhang2023adalora,
+  title     = {{AdaLoRA}: Adaptive Budget Allocation for Parameter-Efficient Fine-Tuning},
+  author    = {Zhang, Qingru and Chen, Minshuo and Bukharin, Alexander and Karampatziakis, Nikos and He, Pengcheng and Cheng, Yu and Chen, Weizhu and Zhao, Tuo},
+  booktitle = {International Conference on Learning Representations (ICLR)},
+  year      = {2023},
+  note      = {arXiv:2303.10512. Author list verified 2026-06-19 (Karampatziakis added)},
+}
+
+@inproceedings{lee2023surgical,
+  title     = {Surgical Fine-Tuning Improves Adaptation to Distribution Shifts},
+  author    = {Lee, Yoonho and Chen, Annie S. and Tajwar, Fahim and Kumar, Ananya and Yao, Huaxiu and Liang, Percy and Finn, Chelsea},
+  booktitle = {International Conference on Learning Representations (ICLR)},
+  year      = {2023},
+  note      = {arXiv:2210.11466},
+}
+
+@inproceedings{xu2024neft,
+  title     = {Let's Focus on Neuron: Neuron-Level Supervised Fine-tuning for Large Language Model},
+  author    = {Xu, Haoyun and Zhan, Runzhe and Ma, Yingpeng and Wong, Derek F. and Chao, Lidia S.},
+  booktitle = {Proceedings of the 31st International Conference on Computational Linguistics (COLING)},
+  pages     = {9393--9406},
+  year      = {2025},
+  note      = {ACL Anthology 2025.coling-main.630; arXiv:2403.11621. Verified 2026-06-19 (COLING record added; author Yingpeng Ma added)},
+}
+
+% ---------------------------------------------------------------------------
+% Coreset / diversity selection (cited as a neighbour, NOT the unverified
+% must-beat id; see registry demotion of arXiv:2605.26004).
+% ---------------------------------------------------------------------------
+@inproceedings{sener2018coreset,
+  title     = {Active Learning for Convolutional Neural Networks: A Core-Set Approach},
+  author    = {Sener, Ozan and Savarese, Silvio},
+  booktitle = {International Conference on Learning Representations (ICLR)},
+  year      = {2018},
+}
+
+% ---------------------------------------------------------------------------
+% Submodular selection / coverage
+% ---------------------------------------------------------------------------
+@article{nemhauser1978submodular,
+  title   = {An Analysis of Approximations for Maximizing Submodular Set Functions---{I}},
+  author  = {Nemhauser, George L. and Wolsey, Laurence A. and Fisher, Marshall L.},
+  journal = {Mathematical Programming},
+  volume  = {14},
+  number  = {1},
+  pages   = {265--294},
+  year    = {1978},
+}
+
+@inproceedings{minoux1978accelerated,
+  title     = {Accelerated Greedy Algorithms for Maximizing Submodular Set Functions},
+  author    = {Minoux, Michel},
+  booktitle = {Optimization Techniques (IFIP Technical Conference)},
+  pages     = {234--243},
+  year      = {1978},
+}
+
+@inproceedings{wei2015submodular,
+  title     = {Submodularity in Data Subset Selection and Active Learning},
+  author    = {Wei, Kai and Iyer, Rishabh and Bilmes, Jeff},
+  booktitle = {International Conference on Machine Learning (ICML)},
+  year      = {2015},
+}
+
+% ---------------------------------------------------------------------------
+% Partialling-out / orthogonalization / double machine learning (the
+% co-primary residual estimand is ridge-FWL / double-ML style).
+% ---------------------------------------------------------------------------
+@article{frisch1933partial,
+  title   = {Partial Time Regressions as Compared with Individual Trends},
+  author  = {Frisch, Ragnar and Waugh, Frederick V.},
+  journal = {Econometrica},
+  volume  = {1},
+  number  = {4},
+  pages   = {387--401},
+  year    = {1933},
+}
+
+@article{lovell1963seasonal,
+  title   = {Seasonal Adjustment of Economic Time Series and Multiple Regression Analysis},
+  author  = {Lovell, Michael C.},
+  journal = {Journal of the American Statistical Association},
+  volume  = {58},
+  number  = {304},
+  pages   = {993--1010},
+  year    = {1963},
+}
+
+@article{chernozhukov2018double,
+  title   = {Double/Debiased Machine Learning for Treatment and Structural Parameters},
+  author  = {Chernozhukov, Victor and Chetverikov, Denis and Demirer, Mert and Duflo, Esther and Hansen, Christian and Newey, Whitney and Robins, James},
+  journal = {The Econometrics Journal},
+  volume  = {21},
+  number  = {1},
+  pages   = {C1--C68},
+  year    = {2018},
+}
+
+@article{hoerl1970ridge,
+  title   = {Ridge Regression: Biased Estimation for Nonorthogonal Problems},
+  author  = {Hoerl, Arthur E. and Kennard, Robert W.},
+  journal = {Technometrics},
+  volume  = {12},
+  number  = {1},
+  pages   = {55--67},
+  year    = {1970},
+}
+
+% ---------------------------------------------------------------------------
+% Resampling inference: permutation, bootstrap, BCa
+% ---------------------------------------------------------------------------
+@book{good2005permutation,
+  title     = {Permutation, Parametric, and Bootstrap Tests of Hypotheses},
+  author    = {Good, Phillip I.},
+  publisher = {Springer},
+  edition   = {3rd},
+  year      = {2005},
+}
+
+@article{efron1987bca,
+  title   = {Better Bootstrap Confidence Intervals},
+  author  = {Efron, Bradley},
+  journal = {Journal of the American Statistical Association},
+  volume  = {82},
+  number  = {397},
+  pages   = {171--185},
+  year    = {1987},
+}
+
+@book{efron1993bootstrap,
+  title     = {An Introduction to the Bootstrap},
+  author    = {Efron, Bradley and Tibshirani, Robert J.},
+  publisher = {Chapman and Hall/CRC},
+  year      = {1993},
+}
+
+% ---------------------------------------------------------------------------
+% Multiplicity, proper scoring, reliability
+% ---------------------------------------------------------------------------
+@article{holm1979simple,
+  title   = {A Simple Sequentially Rejective Multiple Test Procedure},
+  author  = {Holm, Sture},
+  journal = {Scandinavian Journal of Statistics},
+  volume  = {6},
+  number  = {2},
+  pages   = {65--70},
+  year    = {1979},
+}
+
+% Intersection-union test: a level-alpha test of a union null = reject iff every
+% component rejects at alpha, with NO multiplicity penalty. The "beats every
+% control / every comparator" decisions (Gates R1, R2-target) are IUTs.
+@article{berger1982iut,
+  title   = {Multiparameter Hypothesis Testing and Acceptance Sampling},
+  author  = {Berger, Roger L.},
+  journal = {Technometrics},
+  volume  = {24},
+  number  = {4},
+  pages   = {295--300},
+  year    = {1982},
+}
+
+% Graphical (Maurer--Bretz) sequentially-rejective gatekeeping: the closed-testing
+% alpha-graph R0 -> R1 -> R2t -> {drift,cost} with the shortcut == brute-force
+% equivalence we verify in code.
+@article{bretz2009graphical,
+  title   = {A Graphical Approach to Sequentially Rejective Multiple Test Procedures},
+  author  = {Bretz, Frank and Maurer, Willi and Brannath, Werner and Posch, Martin},
+  journal = {Statistics in Medicine},
+  volume  = {28},
+  number  = {4},
+  pages   = {586--604},
+  year    = {2009},
+}
+
+% Studentized bootstrap-t one-sided lower bound: the per-contrast inference inside
+% each IUT component (asymptotically valid; not claimed exact at finite S).
+@article{hall1988bootstrap,
+  title   = {Theoretical Comparison of Bootstrap Confidence Intervals},
+  author  = {Hall, Peter},
+  journal = {The Annals of Statistics},
+  volume  = {16},
+  number  = {3},
+  pages   = {927--953},
+  year    = {1988},
+}
+
+@article{brier1950verification,
+  title   = {Verification of Forecasts Expressed in Terms of Probability},
+  author  = {Brier, Glenn W.},
+  journal = {Monthly Weather Review},
+  volume  = {78},
+  number  = {1},
+  pages   = {1--3},
+  year    = {1950},
+}
+
+@article{gneiting2007strictly,
+  title   = {Strictly Proper Scoring Rules, Prediction, and Estimation},
+  author  = {Gneiting, Tilmann and Raftery, Adrian E.},
+  journal = {Journal of the American Statistical Association},
+  volume  = {102},
+  number  = {477},
+  pages   = {359--378},
+  year    = {2007},
+}
+
+@article{shrout1979intraclass,
+  title   = {Intraclass Correlations: Uses in Assessing Rater Reliability},
+  author  = {Shrout, Patrick E. and Fleiss, Joseph L.},
+  journal = {Psychological Bulletin},
+  volume  = {86},
+  number  = {2},
+  pages   = {420--428},
+  year    = {1979},
+}
+
+@inproceedings{guo2017calibration,
+  title     = {On Calibration of Modern Neural Networks},
+  author    = {Guo, Chuan and Pleiss, Geoff and Sun, Yu and Weinberger, Kilian Q.},
+  booktitle = {International Conference on Machine Learning (ICML)},
+  year      = {2017},
+}
+
+% ---------------------------------------------------------------------------
+% Optimal transport / sliced Wasserstein
+% ---------------------------------------------------------------------------
+@book{villani2009optimal,
+  title     = {Optimal Transport: Old and New},
+  author    = {Villani, C{\'e}dric},
+  publisher = {Springer},
+  year      = {2009},
+}
+
+@article{bonneel2015sliced,
+  title   = {Sliced and Radon Wasserstein Barycenters of Measures},
+  author  = {Bonneel, Nicolas and Rabin, Julien and Peyr{\'e}, Gabriel and Pfister, Hanspeter},
+  journal = {Journal of Mathematical Imaging and Vision},
+  volume  = {51},
+  number  = {1},
+  pages   = {22--45},
+  year    = {2015},
+}
+
+@inproceedings{kolouri2019gsw,
+  title     = {Generalized Sliced Wasserstein Distances},
+  author    = {Kolouri, Soheil and Nadjahi, Kimia and Simsekli, Umut and Badeau, Roland and Rohde, Gustavo K.},
+  booktitle = {Advances in Neural Information Processing Systems (NeurIPS)},
+  year      = {2019},
+}
+
+@article{gretton2012mmd,
+  title   = {A Kernel Two-Sample Test},
+  author  = {Gretton, Arthur and Borgwardt, Karsten M. and Rasch, Malte J. and Sch{\"o}lkopf, Bernhard and Smola, Alexander},
+  journal = {Journal of Machine Learning Research},
+  volume  = {13},
+  number  = {25},
+  pages   = {723--773},
+  year    = {2012},
+}
+
+% ---------------------------------------------------------------------------
+% Continual learning / retention (Fisher-based stability)
+% ---------------------------------------------------------------------------
+@article{kirkpatrick2017ewc,
+  title   = {Overcoming Catastrophic Forgetting in Neural Networks},
+  author  = {Kirkpatrick, James and Pascanu, Razvan and Rabinowitz, Neil and Veness, Joel and Desjardins, Guillaume and Rusu, Andrei A. and Milan, Kieran and Quan, John and Ramalho, Tiago and Grabska-Barwinska, Agnieszka and others},
+  journal = {Proceedings of the National Academy of Sciences (PNAS)},
+  volume  = {114},
+  number  = {13},
+  pages   = {3521--3526},
+  year    = {2017},
+}
+
+% ---------------------------------------------------------------------------
+% Parameter-efficient tuning
+% ---------------------------------------------------------------------------
+@inproceedings{hu2022lora,
+  title     = {{LoRA}: Low-Rank Adaptation of Large Language Models},
+  author    = {Hu, Edward J. and Shen, Yelong and Wallis, Phillip and Allen-Zhu, Zeyuan and Li, Yuanzhi and Wang, Shean and Wang, Lu and Chen, Weizhu},
+  booktitle = {International Conference on Learning Representations (ICLR)},
+  year      = {2022},
+}
+
+% Sparsely-gated mixture-of-experts: the canonical learned-router prior art. Used in
+% place of the previously non-checkable "LoRA/MoE routing (AAAI; review link)" entry;
+% verified 2026-06-19.
+@inproceedings{shazeer2017moe,
+  title     = {Outrageously Large Neural Networks: The Sparsely-Gated Mixture-of-Experts Layer},
+  author    = {Shazeer, Noam and Mirhoseini, Azalia and Maziarz, Krzysztof and Davis, Andy and Le, Quoc and Hinton, Geoffrey and Dean, Jeff},
+  booktitle = {International Conference on Learning Representations (ICLR)},
+  year      = {2017},
+  note      = {arXiv:1701.06538},
+}
+
+% ---------------------------------------------------------------------------
+% Interpretability / trajectories in representation space
+% ---------------------------------------------------------------------------
+@inproceedings{elhage2021mathematical,
+  title     = {A Mathematical Framework for Transformer Circuits},
+  author    = {Elhage, Nelson and Nanda, Neel and Olsson, Catherine and Henighan, Tom and others},
+  booktitle = {Transformer Circuits Thread},
+  year      = {2021},
+  note      = {Non-archival; \url{https://transformer-circuits.pub/2021/framework/index.html}. Verified 2026-06-19},
+}
+
+% ---------------------------------------------------------------------------
+% Registered Reports / pre-registration methodology
+% ---------------------------------------------------------------------------
+@article{chambers2014registered,
+  title   = {Registered Reports: A New Publishing Initiative at Cortex},
+  author  = {Chambers, Christopher D.},
+  journal = {Cortex},
+  volume  = {49},
+  number  = {3},
+  pages   = {609--610},
+  year    = {2013},
+}
+
+% ---------------------------------------------------------------------------
+% Backbone models and candidate corpora (pinned, released checkpoints)
+% ---------------------------------------------------------------------------
+@article{qwen2025,
+  title   = {{Qwen2.5} Technical Report},
+  author  = {{Qwen Team}},
+  journal = {arXiv preprint arXiv:2412.15115},
+  year    = {2024},
+  note    = {Qwen2.5-7B-Instruct and Qwen2.5-1.5B-Instruct, Apache-2.0. arXiv:2412.15115 verified 2026-06-19},
+}
+
+@inproceedings{yu2024metamath,
+  title     = {{MetaMath}: Bootstrap Your Own Mathematical Questions for Large Language Models},
+  author    = {Yu, Longhui and Jiang, Weisen and Shi, Han and Yu, Jincheng and Liu, Zhengying and Zhang, Yu and Kwok, James T. and Li, Zhenguo and Weller, Adrian and Liu, Weiyang},
+  booktitle = {International Conference on Learning Representations (ICLR)},
+  year      = {2024},
+}
+
+@inproceedings{yang2018hotpotqa,
+  title     = {{HotpotQA}: A Dataset for Diverse, Explainable Multi-hop Question Answering},
+  author    = {Yang, Zhilin and Qi, Peng and Zhang, Saizheng and Bengio, Yoshua and Cohen, William W. and Salakhutdinov, Ruslan and Manning, Christopher D.},
+  booktitle = {Conference on Empirical Methods in Natural Language Processing (EMNLP)},
+  year      = {2018},
+}
+
+% Code-instruct candidate pool (the permissive code-instruct set used in
+% configs/experiments/lattice_v4.yaml, reports/run_packet.md, and the Datasets
+% paragraph of main.tex). A community Hugging Face dataset, not an archival paper;
+% pinned by repo_id + revision: main with the split content-hash resolved at
+% authorization. Apache-2.0.
+@misc{glaive2023codeassistant,
+  title        = {{Glaive Code Assistant}: A Dataset of Code Problems and Solutions},
+  author       = {{Glaive AI}},
+  year         = {2023},
+  howpublished = {Hugging Face dataset \texttt{glaiveai/glaive-code-assistant}},
+  note         = {\url{https://huggingface.co/datasets/glaiveai/glaive-code-assistant}, revision: main, Apache-2.0},
+}
+
+@inproceedings{hendrycks2021mmlu,
+  title     = {Measuring Massive Multitask Language Understanding},
+  author    = {Hendrycks, Dan and Burns, Collin and Basart, Steven and Zou, Andy and Mazeika, Mantas and Song, Dawn and Steinhardt, Jacob},
+  booktitle = {International Conference on Learning Representations (ICLR)},
+  year      = {2021},
+}
+
+@inproceedings{lin2022truthfulqa,
+  title     = {{TruthfulQA}: Measuring How Models Mimic Human Falsehoods},
+  author    = {Lin, Stephanie and Hilton, Jacob and Evans, Owain},
+  booktitle = {Annual Meeting of the Association for Computational Linguistics (ACL)},
+  year      = {2022},
+}
+
+@inproceedings{min2023factscore,
+  title     = {{FActScore}: Fine-grained Atomic Evaluation of Factual Precision in Long Form Text Generation},
+  author    = {Min, Sewon and Krishna, Kalpesh and Lyu, Xinxi and Lewis, Mike and Yih, Wen-tau and Koh, Pang Wei and Iyyer, Mohit and Zettlemoyer, Luke and Hajishirzi, Hannaneh},
+  booktitle = {Conference on Empirical Methods in Natural Language Processing (EMNLP)},
+  year      = {2023},
+}

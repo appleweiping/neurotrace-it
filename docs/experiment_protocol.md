@@ -51,12 +51,26 @@ All datasets require manifest, license, split hash, and contamination audit.
 
 ## Early Kill Gates
 
-1. Trajectory selection must beat endpoint activation selection by >=3 percent
-   relative on target capability or retention-adjusted score.
-2. Retention drift must not be worse than endpoint selection by more than 1
-   absolute point.
-3. Layer-wise policy must beat uniform adaptation in at least two capability
-   families or be downgraded to diagnostic.
-4. Selection cost must remain within 2x endpoint-selection cost for the same
-   candidate pool, unless the paper claims a high-cost analysis method only.
+> **SUPERSEDED (2026-06-19).** The relative/absolute thresholds first drafted here
+> (>=3% relative, 1 absolute point, 2x cost, "two capability families") are
+> **no longer the active confirmatory gates**. The locked decision thresholds now
+> live in `configs/experiments/lattice_v5.yaml` and `docs/redesign/REDESIGN_v5.md`,
+> expressed as additive margins on a normalized `[0,1]` utility scale. The values
+> below have been rewritten to match the locked v5 surface; `lattice_v5.yaml` is the
+> single source of truth and overrides any residual wording here.
+
+1. Trajectory/routing win (`delta_R1 = 0.01`, normalized): `pi_psi` must beat every
+   control's pool-conditional value by `>= 0.01` normalized utility (one normalized
+   point) via the per-contrast marginal-alpha bound; the method gate
+   (`delta_target = 0.01`) requires the same margin over the stronger full-L NAIT
+   variant and every locked baseline.
+2. Retention-drift ceiling (`delta_ret = 0.02`, normalized): the retention-loss
+   upper bound must sit below `0.02` (<=2 normalized points) vs the matched
+   reference; the hallucination-drift ceiling is `delta_hall = 0.02` likewise.
+3. Cost-gap ceiling (`delta_cost = 0.05`): realized matched-budget training-compute
+   overhead must stay below 5 percent relative, unless the paper claims a high-cost
+   analysis method only.
+4. Layer-policy contribution is a **non-confirmatory generalization probe**
+   (`generalization_probe.confirmatory: false` in `lattice_v5.yaml`), Holm-corrected
+   within the probe; it is no longer a "two capability families" confirmatory gate.
 

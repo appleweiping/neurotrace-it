@@ -1,5 +1,19 @@
 # NeuroTrace-IT Endpoint Baseline Plan
 
+> **STALE / SUPERSEDED (v1-era packet).** This early draft predates the LATTICE-R
+> v5 redesign and is kept only for historical context. Its thresholds, command,
+> and config below are **NOT the registered v5 decision rules** and must not be
+> read as such. The binding, locked thresholds live in
+> `configs/experiments/lattice_v5.yaml` and are listed in
+> `reports/run_packet.md` (e.g. R1 margin `delta_R1 = 0.01`, R2 non-inferiority
+> margins `delta_target/delta_rel/delta_ret/delta_hall/delta_cost`, `floor_partial`).
+> In particular the `0.03 relative gate`, the `0.01` retention-drift line, the
+> `2x` cost ceiling, the `run_selection_gate.py` script, and the
+> `formal_neurotrace_it.yaml` config named in the Stop Conditions / Candidate
+> Command below are all **obsolete v1 placeholders**, superseded by the v5
+> bootstrap-`t` gates G2r/G2h/G2c and the closed-testing graph. See
+> `docs/redesign/REDESIGN_v5.md` for the current design.
+
 Status: design-only local packet. No server command is authorized.
 
 ## First Server Gate Draft

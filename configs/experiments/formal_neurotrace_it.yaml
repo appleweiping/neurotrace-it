@@ -31,13 +31,32 @@ metrics:
   efficiency:
     - selection_cost_hours
     - training_cost_hours
+# GATES SYNCED TO THE v5 LOCKED THRESHOLDS (C+D hardening, 2026-06-19).
+# The binding source of the locked decision thresholds is
+# configs/experiments/lattice_v5.yaml + docs/redesign/REDESIGN_v5.md (§5.6); where
+# this file and lattice_v5.yaml ever disagree, lattice_v5.yaml governs. The legacy
+# v4-era gate values (0.03 target / 0.02 trajectory / 0.01 drift / 2.0 cost) are
+# SUPERSEDED. Margins are on the normalized [0,1] utility scale; the cost gate is a
+# relative training-compute overhead ceiling. These are pre-registered DESIGN
+# CHOICES, not results. server.authorized stays false.
 gates:
-  target_or_adjusted_relative_gain: 0.03
-  trajectory_endpoint_relative_gain: 0.02
-  max_retention_drift_abs: 0.01
-  max_hallucination_drift_abs: 0.01
-  max_selection_cost_multiplier: 2.0
+  # delta_target (R2-target superiority margin; was 0.03)
+  target_or_adjusted_relative_gain: 0.01
+  # delta_R1 (routing win margin; was the 0.02 trajectory-vs-endpoint gate)
+  trajectory_endpoint_relative_gain: 0.01
+  # delta_ret (retention-drift non-inferiority ceiling; was 0.01)
+  max_retention_drift_abs: 0.02
+  # delta_hall (hallucination-drift non-inferiority ceiling; was 0.01)
+  max_hallucination_drift_abs: 0.02
+  # delta_cost (relative training-compute overhead ceiling, 5%; replaces the 2.0x
+  # selection-cost multiplier of the v4 design)
+  max_cost_overhead_rel: 0.05
+  # legacy v4 selection-cost multiplier, retained as SUPERSEDED for provenance only
+  max_selection_cost_multiplier_superseded: 2.0
+  # floor_partial (Gate-R0 partial-R^2 floor)
+  floor_partial: 0.01
   endpoint_baseline_required: true
+binding_source: configs/experiments/lattice_v5.yaml
 server:
   authorized: false
-  reason: ARIS design review not complete
+  reason: ARIS design review not complete; thresholds locked per lattice_v5.yaml

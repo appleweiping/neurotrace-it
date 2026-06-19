@@ -36,6 +36,27 @@ def main() -> int:
             print(f"missing config marker: {marker}")
         return 1
 
+    # The v5 LATTICE-R redesign is the binding source of the locked decision
+    # thresholds (REDESIGN_v5 / lattice_v5.yaml). Validate that the v5 config exists
+    # and pins the locked design choices, so the green validator reflects the v5
+    # design -- not only the legacy formal_neurotrace_it surface.
+    if not require_markers(
+        ROOT / "configs" / "experiments" / "lattice_v5.yaml",
+        [
+            "delta_R1: 0.01",
+            "delta_target: 0.01",
+            "delta_ret: 0.02",
+            "delta_hall: 0.02",
+            "delta_cost: 0.05",
+            "floor_partial: 0.01",
+            "R_tot: 64",
+            "r_max: 16",
+            "authorized: false",
+        ],
+        "lattice_v5 locked threshold",
+    ):
+        return 1
+
     seeds = [
         line.strip()
         for line in (ROOT / "configs" / "seeds" / "paper_20.txt").read_text(encoding="utf-8").splitlines()
@@ -55,7 +76,7 @@ def main() -> int:
         ROOT / "configs" / "baselines" / "baseline_registry.yaml",
         [
             "endpoint_neuron_selection:",
-            "NAIT-style endpoint-neuron baseline",
+            "NAIT endpoint-neuron baseline",
             "https://arxiv.org/abs/2603.13201",
             "implementation_source:",
             "license:",

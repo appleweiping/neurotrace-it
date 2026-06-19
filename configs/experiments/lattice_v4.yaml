@@ -1,0 +1,184 @@
+project: neurotrace-it
+run_tier: lattice_v4_design
+status: no_server_run_authorized
+# Pinned, FROZEN hyper-parameters for the REDESIGN_v4 NOVEL CORE (LATTICE).
+# Build-now / run-later: no command in this file is executed; server.authorized
+# stays false. All knobs below are the locked Stage-1 Registered-Report values
+# (REDESIGN_v4 §1.4, §4.2, §4.5, §4.8). The resolution sweep (§2.7) is the ONLY
+# mechanism allowed to move the operator knobs, and only to hold the cost gate.
+
+base_models:
+  # FREEZE (§4.8): released checkpoints only (fix f3, §1.4). Two-size design
+  # (7B + 1.5B), Apache-2.0. No future-dated / unreleased pin. The repo IDs and
+  # revisions below are the pre-registered choices; the exact commit revision and
+  # tokenizer hash are pinned at run authorization (server.authorized stays false).
+  primary:
+    id: Qwen2.5-7B-Instruct
+    repo_id: Qwen/Qwen2.5-7B-Instruct
+    license: apache-2.0
+    approx_params: 7.6B
+    tuning_method: lora
+    revision: main                 # PINNED: HF git ref to resolve to a commit SHA
+    # The exact commit SHA + tokenizer/checkpoint hashes are RESOLVED (not invented)
+    # from `revision: main` HEAD via huggingface_hub at run authorization; we do NOT
+    # transcribe checksum digits here to avoid fabricating values. Resolver below.
+    pin_resolver: huggingface_hub.HfApi().model_info(repo_id, revision).sha
+    checkpoint_hash: resolve_from_revision_at_authorization   # = model_info.sha (commit SHA)
+    tokenizer_hash: resolve_from_revision_at_authorization    # sha256(tokenizer.json) at that SHA
+  secondary:
+    id: Qwen2.5-1.5B-Instruct
+    repo_id: Qwen/Qwen2.5-1.5B-Instruct
+    license: apache-2.0
+    approx_params: 1.5B
+    tuning_method: lora
+    revision: main                 # PINNED: HF git ref to resolve to a commit SHA
+    pin_resolver: huggingface_hub.HfApi().model_info(repo_id, revision).sha
+    checkpoint_hash: resolve_from_revision_at_authorization   # = model_info.sha (commit SHA)
+    tokenizer_hash: resolve_from_revision_at_authorization    # sha256(tokenizer.json) at that SHA
+  alternates:
+    - Llama-3.1-8B-Instruct
+    - Llama-3.2-3B-Instruct
+    - Mistral-7B-Instruct-v0.3
+  approval_marker: first_gate_open_model_pending_user_approval
+
+candidate_pool:
+  # FREEZE (§4.8): permissive candidate sources by family. Dataset IDENTITIES are
+  # PINNED below (repo_id + git revision); the exact split content-hash is RESOLVED
+  # (not invented) from `revision` HEAD via datasets/huggingface_hub at run
+  # authorization. The two previously-deferred families (code, multihop) now carry
+  # concrete repo IDs.
+  pin_resolver: huggingface_hub.HfApi().dataset_info(repo_id, revision).sha
+  math:
+    dataset: MetaMathQA
+    repo_id: meta-math/MetaMathQA
+    license: mit
+    revision: main               # PINNED git ref; content-hash resolved at authorization
+    split_hash: resolve_from_revision_at_authorization
+  code:                          # DEFERRED IDENTITY NOW PINNED
+    dataset: glaive-code-assistant
+    repo_id: glaiveai/glaive-code-assistant
+    license: apache-2.0
+    revision: main               # PINNED git ref; content-hash resolved at authorization
+    split_hash: resolve_from_revision_at_authorization
+  multihop:                      # DEFERRED IDENTITY NOW PINNED
+    dataset: HotpotQA
+    repo_id: hotpotqa/hotpot_qa
+    config: distractor
+    license: cc-by-sa-4.0
+    revision: main               # PINNED git ref; content-hash resolved at authorization
+    split_hash: resolve_from_revision_at_authorization
+
+retention_eval:
+  # FREEZE (§4.8): held-out retention benchmark. Pre-registered.
+  benchmark: MMLU_heldout
+  note: pre-registered; pin exact revision/hash at run authorization
+
+hallucination_eval:
+  # FREEZE (§4.8): hallucination / factuality benchmarks (also G6 ground truth).
+  benchmarks:
+    - TruthfulQA
+    - FActScore_style_atomic_claim_factuality
+  note: pre-registered; pin exact revision/hash at run authorization
+
+trajectory_operator:
+  # SW2 distributional magnitude term D_l (Eq. 3-4) and curvature kappa_l (Eq. 5).
+  anchor_layers: 8                 # |A|, evenly spaced over depth, fixed on validation
+  sw2_projections: 64              # K random projections (seeds persisted)
+  subsample_cap: 512               # (step, token) vectors per layer (persisted mask)
+  curvature_eps: 1.0e-8            # epsilon in Eq. 5 denominator
+  projection_seed_base: 0          # base seed; per-layer/per-projection derived deterministically
+
+co_primary_regression:
+  # Full-phi_end ridge partialling-out + cross-fit + permutation (§2.3-§2.4, §4.2).
+  endpoint_control: full_phi_end_ridge   # CO-PRIMARY control (NOT a 16-PC summary)
+  pca_robustness_ranks: [8, 16, 32]      # PCA-r sensitivity poles (robustness floor)
+  ridge_lambda_grid: [1.0e-2, 1.0e-1, 1.0, 10.0, 100.0]  # x sigma^2_phi; CV-locked per split
+  ridge_lambda_cv_folds: 5
+  cross_fit_folds: 10                    # K (family-stratified, example-disjoint)
+  block_permutations: 5000               # P (within family x fold strata)
+  bootstrap_resamples: 2000              # B_boot (cluster bootstrap, BCa CI)
+  floor_partial_r2: 0.02                 # partial-R^2 residual floor (Eq. 10a)
+  delta_r2_overall_margin: 0.02          # overall-R^2 increment -> deployment margin (Eq. 10b)
+  nested_f: descriptive_in_fold_only_never_inferential
+
+multiplicity:
+  # Two-layer Holm, family-wise alpha = 0.05 (§4.5, fix e).
+  # Gatekeeper key UNIFIED to `joint` to match two_layer_holm()'s default and the
+  # holm_adjust() p-value keys, so wiring this config into the gatekeeper cannot
+  # fail-closed on a name mismatch. `joint` IS the joint-trajectory (T) block.
+  family_wise_alpha: 0.05
+  within_trajectory_family: [joint, D_only, kappa_only]   # `joint` = joint-T block
+  gatekeeper: joint                      # joint (T) block gates D-only / kappa-only
+  across_metric_families: [target, retention, hallucination, layer, cost]
+
+outcome_y:
+  # LOCI retention-adjusted fine-tuning utility (§4.1, fix c).
+  # Y is a UTILITY (higher = more useful): Y_i = +(Delta_g / |g|) * drift_adjust_i,
+  # Delta_g = L_val(theta_{-g}) - L_val(theta); a useful cluster (Delta_g>0) -> Y>0.
+  estimator: leave_one_cluster_in_influence
+  # LOCKED clustering method: deterministic agglomerative surrogate (pure-stdlib,
+  # zero-dependency, fully reproducible). HDBSCAN is an OPTIONAL drop-in only if the
+  # `hdbscan` package is available at run authorization (§4.1).
+  cluster_method: agglomerative_surrogate    # LOCKED default (build-now/run-later)
+  surrogate_seeding: furthest_point_kcenter   # + Lloyd refinement + size-floor dissolution
+  surrogate_metric: euclidean                 # on L2-normalized phi_end
+  hdbscan_optional_dropin: true               # swap-in iff `hdbscan` available
+  hdbscan_min_cluster_size: 25                # persisted HDBSCAN_PARAMS for the drop-in
+  hdbscan_min_samples: 10
+  hdbscan_metric: euclidean
+  hdbscan_cluster_selection_method: eom
+  k_clusters_rule: N_over_200
+  cluster_size_floor: 25
+  persist_assignment_hash: true               # cluster_assignment_hash (§2.10)
+  attribution_baseline: influence_gradient_selection   # method-neutral attribution
+
+y_reliability_gate_g7:
+  # Precondition gate before the primary regression runs on the proxy (§4.4).
+  icc_min: 0.6                           # ICC(2,1) across >=3 seeds
+  proxy_retrain_rho_min: 0.3             # Spearman rho(Y, Delta_retrain), lower 95% CI > 0
+  retrain_subset_clusters: 60            # n_sub
+  seeds_min: 3
+
+factuality_gate_g6:
+  spearman_rho_min: 0.3
+  pearson_r_min: 0.3
+  ece_max: 0.1
+  on_fail: set_lambda_f_zero
+
+matched_pairs:
+  # Matched-endpoint / divergent-curvature DIAGNOSTIC (§3.2, fix f2).
+  tau_end_percentile: 1.0                # 1st percentile of within-bucket endpoint distance
+  curvature_top_decile: 0.10
+  target_pairs: 300                      # ~100 per family
+  coarsened_exact_matching: [length, difficulty, family]
+  report_residual_smd_imbalance: true
+  claim_status: diagnostic_not_causal
+
+selection_objective:
+  # Monotone-submodular facility-location + utility (Eq. 14, §2.8).
+  coverage_weight_mu: 1.0
+  lambda_r: 1.0                          # retention penalty weight
+  lambda_f: 0.0                          # factuality weight: 0 unless G6 passes
+  greedy: lazy_greedy
+  approximation_ratio: one_minus_inv_e   # (1 - 1/e)
+
+cost_model:
+  # Honest THREE-line cost table + extraction-parity kill (§2.7, §4.6, fix f1).
+  gate1_max_multiplier: 2.0
+  extraction_parity_default: force_identical_full_trace_extraction
+  count_differential_trajectory_io_in_gate1_if_no_parity: true
+  gate1b_amortization_R_default: 1
+  report_break_even_R_star: true
+
+router_ablation:
+  # Capacity-matched layer router (§2.9) -- ablation only, NOT load-bearing.
+  enabled: false
+  capacity_match: reallocate_total_lora_rank
+  keep_if_helps_families_min: 2
+
+seeds:
+  manifest: configs/seeds/paper_20.txt
+  strategy: sequential_0_to_19_shared_by_all_methods
+
+server:
+  authorized: false

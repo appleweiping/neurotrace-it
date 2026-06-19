@@ -13,13 +13,26 @@
 
 ## Numeric Decision Gates
 
-| Gate | Metric | Threshold | Failure Action | Verdict |
+> **SUPERSEDED (2026-06-19).** The original gate values in this table
+> (0.03 relative gain, 2.0x cost, "two capability families") are **no longer the
+> active confirmatory thresholds**. The locked decision thresholds now live in
+> `configs/experiments/lattice_v5.yaml` and `docs/redesign/REDESIGN_v5.md`, on a
+> normalized `[0,1]` utility scale. The table below is rewritten to match the locked
+> v5 surface; `lattice_v5.yaml` is the single source of truth and overrides any
+> residual numbers here.
+
+| Gate | Metric | Locked v5 threshold | Failure Action | Verdict |
 | --- | --- | --- | --- | --- |
-| G1 trajectory value | target or retention-adjusted relative gain | >= 0.03 | pivot/downgrade to diagnostic | pass in plan |
-| G2 retention | retention drift disadvantage | <= 0.01 | remove reliability claim | pass in plan |
-| G3 cost | selection cost multiplier vs endpoint | <= 2.0 | narrow to analysis method | pass in plan |
-| G4 layer policy | gain in at least two capability families | > 0 | make layer policy appendix only | pass in plan |
-| G5 paper evidence | seeds/replicates | >= 20 | label diagnostic only | pass in plan |
+| R1 routing value | `pi_psi` vs every control, pool-conditional (normalized) | `delta_R1 >= 0.01` | pivot/downgrade to diagnostic | pass in plan |
+| R2 target | LATTICE-R vs stronger full-L NAIT and all baselines (normalized) | `delta_target >= 0.01` | remove method-superiority claim | pass in plan |
+| R2 retention | retention-drift upper bound (normalized non-inferiority ceiling) | `delta_ret <= 0.02` | remove reliability claim | pass in plan |
+| R2 hallucination | hallucination-drift upper bound (normalized ceiling) | `delta_hall <= 0.02` | remove drift-control claim | pass in plan |
+| R2 cost | matched-budget training-compute overhead | `delta_cost <= 0.05` | narrow to analysis method | pass in plan |
+| Evidence | seeds/replicates | `S >= 20` | label diagnostic only | pass in plan |
+
+Layer policy is no longer a confirmatory "two capability families" gate; it is a
+non-confirmatory generalization probe (`generalization_probe.confirmatory: false`),
+Holm-corrected within the probe (see `lattice_v5.yaml`).
 
 ## Compute Feasibility
 

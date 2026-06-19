@@ -13,8 +13,11 @@ preflight_required:
   - output_dir_empty_or_resumable
   - disk_free_gb_at_least_650
   - raw_activation_cleanup_policy_confirmed
+# Stop conditions synced to the v5 locked thresholds (C+D hardening, 2026-06-19);
+# binding source configs/experiments/lattice_v5.yaml (delta_target=0.01,
+# delta_ret=0.02, delta_cost=0.05). Legacy v4 values (0.03/0.01/2.0x) superseded.
 stop_conditions:
-  - trajectory_gain_below_0_03
-  - retention_drift_above_0_01
-  - cost_multiplier_above_2_0
+  - target_gain_below_0_01
+  - retention_drift_above_0_02
+  - cost_overhead_rel_above_0_05
 

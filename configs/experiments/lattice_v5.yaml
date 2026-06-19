@@ -1,0 +1,221 @@
+project: neurotrace-it
+run_tier: lattice_v5_design
+status: no_server_run_authorized
+# REDESIGN_v5 LATTICE-R routing config (ADDITIVE; does NOT overwrite lattice_v4.yaml).
+# Build-now / run-later: no command in this file is executed. server.authorized stays
+# false. This document fabricates NO numeric RESULT.
+#
+# PRE-REGISTERED DECISION THRESHOLDS ARE NOW LOCKED (C+D hardening, 2026-06-19).
+# These are DESIGN CHOICES fixed BEFORE any run (the whole point of a Stage-1
+# Registered Report) -- they are NOT empirical results and must be pinned now so the
+# analysis cannot be tuned post hoc. Each value carries a provenance/power rationale
+# inline. Only quantities that are genuinely EMPIRICAL OUTPUTS of the (deferred) run
+# remain DATA_NEEDED (e.g. resolved commit SHAs / measured FLOPs / observed gaps).
+# The MULTIPLICITY STRUCTURE constants (alpha-graph weights/edges/split, IUT family)
+# were already pinned per §4.1 and are restated below.
+#
+# Scale convention for all utility margins/floors: the retention-adjusted target
+# utility U_train and the per-control gap g_c are reported on a normalized [0,1]
+# scale (1.0 = full retention-adjusted target accuracy), so a margin of 0.01 == one
+# percentage point of normalized utility. partial-R^2 is a proportion of residual
+# variance in [0,1].
+
+# --- routing policy (§3.5) -----------------------------------------------------
+routing:
+  load_bearing: true
+  domain: A                      # the policy domain is exactly the anchor set A (R2-B1)
+  # r_0 LOCKED = 4: a small fixed baseline LoRA rank carried by every non-anchor
+  # layer (|L\A| = |L| - |A| = |L| - 8, where the locked primary backbone
+  # Qwen2.5-7B-Instruct -- and the secondary Qwen2.5-1.5B-Instruct -- each use
+  # their own layer count |L|; see lattice_v4.yaml base_models), identical across
+  # all six arms so it CANCELS in every pairwise contrast g_c. Kept small so the
+  # anchor-A reallocation of R_tot is where the arms differ.
+  r0_substrate: 4
+  # tau_sel LOCKED as a RULE (not a raw activation value): the P_train quantile of
+  # psi_l yielding a pre-registered mean raw anchor-mask cardinality k_bar = 4 (half
+  # of |A|=8). This fixes how aggressively psi concentrates capacity before
+  # make_feasible_mask lifts to DOM; k_bar=4 == k_min (see r_max below), so pi_psi's
+  # raw mask is already feasible in expectation and pi_rand can match its cardinality.
+  tau_sel:
+    rule: p_train_quantile_for_mean_cardinality
+    k_bar: 4                      # target mean raw ON-cardinality over A (|A|=8)
+  R1_arms: [psi, unif, shuf, rand, global, ada]
+  # delta_R1 LOCKED = 0.01 (one normalized utility point). The routing IUT requires
+  # pi_psi to beat EVERY control's pool-conditional value by >= this margin via its
+  # own marginal-alpha bound. POWER DERIVATION (back-of-envelope, DESIGN choice not a
+  # fitted result): S=20 paired seeds; target per-seed paired-difference SD
+  # sigma_d ~ 0.02 on normalized utility => se = sigma_d/sqrt(S) ~ 0.02/sqrt(20) ~ 0.0045.
+  # At a plausible true gap g ~ 0.025 (just over 1*sigma_d of per-seed separation), the
+  # non-centrality (g - delta_R1)/se = (0.025 - 0.01)/0.0045 ~ 3.3 vs one-sided
+  # z_0.95 ~ 1.64 gives Phi(3.3 - 1.64) = Phi(1.66) ~ 0.95 asymptotic power, conservatively
+  # >= 0.8 once finite-S bootstrap-t quantile inflation is counted. A smaller margin would
+  # not be practically meaningful; a larger one would demand implausibly large true gaps at
+  # S=20. Chosen as a design floor for a *meaningful* routing win, not fitted to data.
+  delta_R1: 0.01
+  R1_seeds: configs/seeds/paper_20.txt   # shared training seeds 0..19 (S >= 20)
+
+# --- capacity_match: score-free, total map on the feasible domain (Eq.6-0b; RE-FIX-2)
+capacity_match:
+  rule: largest_remainder
+  tie_break: ascending_layer_index
+  cap: r_max
+  spillover: largest_remainder_same_support
+  reads_psi: false               # PURE function of (m_A, R_tot, r_max) -- no psi argument
+  domain: feasible_masks         # DOM = { m_A : |supp(m_A)|*r_max >= R_tot }
+
+# --- make_feasible_mask: the ONLY place an arm's score is read (Eq.6-0e) --------
+make_feasible_mask:
+  k_min: "ceil(R_tot/r_max)"
+  empty_mask: uniform_over_A
+  score_source_per_arm:
+    psi: pi_psi
+    fixed_key: controls
+
+# --- R1 controls: every control is a deterministic map of x (RE-FIX-3/4) --------
+controls:
+  # Control RNG seeds LOCKED to fixed integers OUTSIDE the training-seed range 0..19
+  # (so they cannot collide with a confirmatory training seed). Each makes its control
+  # a SINGLE deterministic map of x via seed (+) H(x); the randomization is part of the
+  # policy definition, NOT inside the V(pi) training-seed expectation (RE-FIX-3/4).
+  seed_rand: 20250619           # pi_rand pseudo-random anchor subset (cardinality-matched to pi_psi)
+  seed_shuf: 20250620           # pi_shuf within-stratum permutation of the anchor labels of psi
+  seed_ada: 20250621            # SEPARATE pre-registered seed freezing the AdaLoRA warm-up importance
+  # A_glob LOCKED as a RULE: the fixed surgical block = the top-k_glob anchor layers by
+  # pooled P_train mean |psi_l| (ties ascending-l), with k_glob = k_min = 4 so it holds
+  # R_tot under the cap and is cardinality-comparable to pi_psi. The exact layer INDICES
+  # are resolved deterministically from P_train at run time (a function of frozen psi,
+  # not a free parameter).
+  A_glob:
+    rule: top_kglob_by_P_train_mean_abs_psi
+    k_glob: 4
+    tie_break: ascending_layer_index
+  # W_ada LOCKED = 200 optimizer steps: a fixed, short AdaLoRA importance warm-up run
+  # once under seed_ada (NOT a training seed). Long enough for SVD importance to
+  # stabilize, short relative to the matched training budget so it is not the headline
+  # cost. Its persisted importance is reused by every confirmatory seed.
+  W_ada: 200
+  ada_warmup_seed_outside_V: true  # importance frozen OUTSIDE the V(pi) training-seed expectation
+  randomization: part_of_policy_not_V
+
+# --- NAIT comparator (§3.3, B6) ------------------------------------------------
+nait_variant: [alg1_L, token_mean_L]   # both run over the FULL L; stronger is the comparator
+nait_anchor_secondary: true            # gated 8-anchor diagnostic; never the headline comparator
+
+# --- Gate R2 margins (§3.5 R2; ALL LOCKED design choices, normalized [0,1] scale) --
+R2_margins:
+  # delta_target LOCKED = 0.01: the R2-target IUT superiority margin LATTICE-R must
+  # clear over the stronger full-L NAIT variant AND every locked baseline (one
+  # normalized utility point), matched to delta_R1 for a coherent "meaningful win"
+  # floor. POWER: same S>=20 paired-seed bootstrap-t basis as delta_R1.
+  delta_target: 0.01
+  # delta_rel LOCKED = 0.00: the relative-win lower bound must merely exceed 0 (strict
+  # positivity) on top of delta_target; the binding superiority margin is delta_target,
+  # so delta_rel is the non-negativity guard, not a second large hurdle.
+  delta_rel: 0.00
+  # Non-inferiority CEILINGS (drift/cost): LATTICE-R is allowed to drift/cost up to
+  # these much-and-no-more vs the selection-only / matched reference; the UPPER bound
+  # must sit BELOW the ceiling. Chosen as small, practically-tolerable degradations.
+  delta_ret: 0.02                 # retention-drift ceiling: <=2 normalized points of retention loss
+  delta_hall: 0.02                # hallucination-drift ceiling: <=2 normalized points of added drift
+  delta_cost: 0.05                # cost-gap ceiling: <=5% relative training-compute overhead
+
+# --- factuality calibrator (NeuroTrace-IT own; v4 §2.6, carried into v5) --------
+# The G6 factuality precondition is discharged by NeuroTrace-IT's strictly-proper
+# Brier calibrator (analysis/drift.py BrierCalibrator); no change from lattice_v4.
+# (G6 thresholds live in lattice_v4.yaml:factuality_gate_g6.)
+factuality_calibrator:
+  score: brier                   # ell_Brier(q,y) = (q - y)^2 (v4 Eq.12)
+  strictly_proper: true          # population Brier risk uniquely minimized at q = p
+  recalibration: affine          # q_a = sigma(scale*z_a + bias); identity default
+  threshold: 0.5                 # calibrated decision threshold c* for f_hat(x)
+
+# --- estimand scope (R3-B4) ----------------------------------------------------
+estimand_scope: pool_conditional_locked
+
+compute_ledger:
+  # tolerance LOCKED = 0.02: the matched-budget equality on params / optimizer-state
+  # slots / realized FLOPs must hold within +/-2% relative across arms. A design
+  # tolerance for "compute-matched", not a measurement; the REALIZED FLOPs themselves
+  # are measured at run time (and stay DATA_NEEDED until then).
+  tolerance: 0.02
+
+# --- closed-testing alpha-graph (§4.1; LOCKED alpha ALLOCATION) ----------------
+# The family-wise alpha and its ALLOCATION across the graph are pre-registered design
+# choices (Maurer-Bretz graphical scheme), LOCKED here -- not data-derived:
+#   * family-wise alpha = 0.05 (one-sided, the conventional confirmatory level);
+#   * initial mass w_0 = 1.00 entirely on R0 (R0 must reject first: it is the
+#     mechanism gate; R1/R2 are meaningless without a non-null residual);
+#   * G0->G1 and G1->G2t edges carry the full weight 1.0 (a strict success chain);
+#   * on G2t success, mass splits to the three drift/cost leaves as
+#     (w_r, w_h, w_c) = (0.34, 0.33, 0.33) -- a near-uniform split (retention given
+#     the marginally-larger 0.34) summing to 1.0; recycle 1.0 returns mass to G2t.
+# Each IUT component is tested at the MARGINAL alpha (Berger 1982; no 1/J split).
+closed_testing:
+  alpha: 0.05
+  w_0: 1.00
+  edges:
+    - {from: G0, to: G1, weight: 1.0}     # R0 -> R1
+    - {from: G1, to: G2t, weight: 1.0}    # R1 -> R2-target
+  split: {w_r: 0.34, w_h: 0.33, w_c: 0.33}  # G2t -> {G2r,G2h,G2c}
+  recycle: 1.0                            # {G2r,G2h,G2c} -> G2t
+  # RE-FIX-5: R1 and G2t are SINGLE union-null leaves; in EVERY intersection that
+  # contains them, the local test requires the FULL union (all components), never an
+  # in-scope subset. closed_testing.py enforces this union-null leaf rule.
+  union_null_leaves:
+    R1: {components: 5, rule: full_union_iut}
+    G2t: {components: baseline_set, rule: full_union_iut}
+
+# --- inference (§4.2) ----------------------------------------------------------
+inference:
+  decision: intersection_union_test
+  per_contrast: paired_bootstrap_t
+  marginal_level: alpha           # each IUT component at the MARGINAL level (no 1/J split)
+  # B_bt LOCKED = 10000: paired studentized bootstrap-t resamples per contrast. 10k is
+  # the standard count giving stable one-sided 95% quantiles (Monte-Carlo SE of the
+  # 0.95 quantile << the margin resolution); a fixed design constant, not data.
+  B_bt: 10000
+  fallback: studentized_multiplier
+
+# --- non-confirmatory generalization probe (§3.5a) -----------------------------
+generalization_probe:
+  confirmatory: false
+  # partitions_G LOCKED = 5: the multi-pool re-split probe uses 5 fresh 3-pool
+  # partitions (each with its own pool_split_seed) for the NON-confirmatory
+  # pool-marginal generalization estimate; Holm-corrected WITHIN the probe, never part
+  # of the confirmatory alpha. 5 balances coverage against the cost of full re-runs.
+  partitions_G: 5
+  accounting: holm_within_probe
+
+# --- locked specifics (§5.6) ---------------------------------------------------
+# pool_split_seed LOCKED = 20250619: the single salt that deterministically derives the
+# ONE locked (P_train, P_val, P_dep) partition every confirmatory claim is conditioned
+# on. Fixed now so the 3-pool firewall split cannot be reshuffled to chase an outcome.
+pool_split_seed: 20250619
+# rho_J LOCKED = 0.30: the Spearman-rho gate the off-manifold layer-ablation profile
+# J_{c,l} must clear against the descriptive leave-one-anchor-layer policy-value
+# difference Delta^LOL before J may enter the router prior; else J is DROPPED. 0.30 is
+# a conventional "moderate monotone agreement" floor (matches the G6/G7 rho gates).
+rho_J: 0.30
+# floor_partial LOCKED = 0.01: the partial-R^2 floor the cluster-BCa 95% lower bound
+# must EXCEED for Gate R0 (the trajectory residual must explain >=1% of residual
+# variance beyond [phi_end, NAIT(L)]). A minimal non-null effect size, pre-registered
+# so a vanishing-but-significant residual cannot pass; 0.01 is a meaningful partial-R^2
+# floor for a high-dimensional residualized regression.
+floor_partial: 0.01
+
+# --- LoRA capacity budget (§5.6; LOCKED feasibility-coupled design constants) ---
+# R_tot LOCKED = 64: total LoRA rank reallocated OVER the anchor set A (|A|=8) by every
+# arm. 64 = |A| * 8, i.e. an even allocation gives rank 8 per anchor (a standard LoRA
+# rank), so pi_unif is a conventional rank-8-everywhere adapter and pi_psi concentrates
+# the same 64 onto supp(psi). Holds L\A fixed at r_0=4.
+R_tot: 64
+# r_max LOCKED = 16: per-anchor rank cap used by capacity_match spillover. Feasibility
+# (REQUIRED, RE-FIX-2 / §5.6): |A| * r_max = 8 * 16 = 128 >= 64 = R_tot, so the uniform
+# mask 1_A is in DOM and k_min = ceil(R_tot/r_max) = ceil(64/16) = 4 <= |A|. r_max=16 =
+# 2x the even share (R_tot/|A|=8), letting psi concentrate up to double rank on a layer
+# while keeping capacity_match a total, score-free map on DOM. R_tot is allocated
+# strictly over A; L\A stays at r_0.
+r_max: 16
+
+server:
+  authorized: false
