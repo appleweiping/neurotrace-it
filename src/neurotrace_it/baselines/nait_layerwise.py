@@ -109,15 +109,50 @@ def principal_direction(
 ) -> list[float]:
     """First principal component ``PCA_1`` of mean-centered ``samples`` (Eq. 3).
 
-    Pure-stdlib power iteration on the sample covariance (no numpy). Returns a
-    unit-norm direction; deterministic (fixed all-ones start, renormalized).
-    Centering is applied so this is PCA, not a raw second-moment direction.
+    Deterministic power iteration on the sample covariance: fixed all-ones start
+    (renormalized), update ``v <- normalize(sum_i (x_i . v) x_i)`` on the
+    mean-centered samples, with the same ``tol`` and degenerate handling. A numpy
+    fast-path vectorizes the centering + iteration (identical algorithm, the
+    update is exactly ``Xc^T (Xc v)`` and the mean is computed ONCE rather than
+    per-sample); the pure-stdlib path is the fallback when numpy is unavailable
+    AND also computes the centering mean once (the old per-sample ``_mean`` inside
+    the comprehension was an O(n^2 d) trap that pinned a CPU core at n in the
+    thousands). Centering is applied so this is PCA, not a raw second-moment
+    direction.
     """
 
     if not samples:
         raise ValueError("principal_direction needs at least one sample")
     d = len(samples[0])
-    centered = [_sub(_as_floats(s), _mean([_as_floats(x) for x in samples])) for s in samples]
+
+    try:
+        import numpy as _np
+    except ImportError:  # pragma: no cover - numpy is present on the run host
+        _np = None
+
+    if _np is not None:
+        X = _np.asarray([_as_floats(s) for s in samples], dtype=_np.float64)
+        Xc = X - X.mean(axis=0, keepdims=True)
+        v = _np.full(d, 1.0 / math.sqrt(d), dtype=_np.float64)
+        for _ in range(iterations):
+            acc = Xc.T @ (Xc @ v)  # sum_i (x_i . v) x_i
+            norm = float(_np.sqrt(_np.dot(acc, acc)))
+            if norm <= tol:
+                # Degenerate (all samples identical after centering): stable
+                # canonical unit vector so downstream sign-align/scoring is defined.
+                out = [0.0] * d
+                out[0] = 1.0
+                return out
+            new_v = acc / norm
+            delta = float(_np.sqrt(_np.dot(new_v - v, new_v - v)))
+            v = new_v
+            if delta <= tol:
+                break
+        return [float(c) for c in v]
+
+    # Pure-stdlib fallback (numpy absent): centering mean computed ONCE.
+    mu0 = _mean([_as_floats(x) for x in samples])
+    centered = [_sub(_as_floats(s), mu0) for s in samples]
 
     # Power iteration: v <- normalize( sum_i (x_i . v) x_i ).
     v = [1.0 / math.sqrt(d)] * d

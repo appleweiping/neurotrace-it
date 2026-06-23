@@ -32,6 +32,24 @@ import random
 from dataclasses import dataclass, field
 from typing import Callable, Mapping, Sequence
 
+# Optional numpy acceleration for the PCA robustness-pole projection
+# (:func:`_top_pca`). The pure-python deflated power iteration forms the n x n
+# Gram and runs up to 100 iterations per component IN PYTHON -- O(n^2) per
+# iteration, which dominates design assembly at n=2000 (minutes). numpy routes the
+# Gram to a float64 matmul and the eigendecomposition to LAPACK ``eigh``. The PCA
+# scores define a ridge-PENALIZED control SUBSPACE (a robustness pole); the
+# downstream residual-maker M_lambda is invariant to the basis chosen within that
+# top-r eigenspace, so the fast-path and the stdlib path yield the same control
+# (and the same robustness verdict) -- only the within-subspace basis/sign differs.
+# Without numpy the exact stdlib path is used, so the module stays import-safe.
+try:  # pragma: no cover - presence-dependent
+    import numpy as _np
+
+    _HAVE_NUMPY = True
+except Exception:  # noqa: BLE001
+    _np = None
+    _HAVE_NUMPY = False
+
 Matrix = list[list[float]]
 Vector = list[float]
 
@@ -113,6 +131,24 @@ def _top_pca(standardized_phi: Matrix, rank: int, *, seed: int = 0) -> Matrix:
     eff = min(rank, p, n)
     if eff <= 0:
         return [[] for _ in range(n)]
+
+    if _HAVE_NUMPY:
+        # numpy fast-path: top-``eff`` eigenpairs of G = Phi Phi^T via LAPACK eigh.
+        # Scores = u_k * sqrt(lambda_k) for the largest eigenvalues (same as the
+        # converged power-iteration components, up to within-eigenspace basis/sign,
+        # which is immaterial for a ridge-penalized control pole). Truncates at the
+        # same lambda > 1e-12 positivity guard as the stdlib deflation.
+        phi_mat = _np.asarray(standardized_phi, dtype=_np.float64)
+        gram_np = phi_mat @ phi_mat.T
+        gram_np = 0.5 * (gram_np + gram_np.T)
+        eigvals, eigvecs = _np.linalg.eigh(gram_np)        # ascending
+        order = eigvals[::-1][:eff]
+        vecs = eigvecs[:, ::-1][:, :eff]
+        keep = order > 1e-12
+        order = order[keep]
+        vecs = vecs[:, keep]
+        scores = vecs * _np.sqrt(order)                     # (n, n_kept)
+        return [[float(v) for v in row] for row in scores]
 
     # n x n Gram G = Phi Phi^T (avoids p x p for wide phi). Top eigenvectors of G
     # give the principal-component SCORES directly (score_k = sqrt(lambda_k) u_k).

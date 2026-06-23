@@ -159,6 +159,47 @@ def test_sw2_is_reproducible_given_seed():
     assert seeds_a == seeds_b
 
 
+def test_sw2_numpy_fast_path_is_numerically_equivalent_to_stdlib():
+    """The optional numpy SW2 acceleration must match the pure-stdlib path.
+
+    Equivalence is the contract for the speedup (Task C): the numpy fast path only
+    vectorizes the dot-product / sort / integrate; the RNG-driven projection
+    directions and per-projection seeds are computed identically. Forcing both
+    paths on the SAME inputs must agree to < 1e-6 (machine-epsilon in practice),
+    across equal/unequal cloud sizes, several dims, projection counts, and seeds.
+    """
+
+    import neurotrace_it.trajectory as traj_mod
+
+    if not traj_mod._HAVE_NUMPY:  # pragma: no cover - numpy is present in this env
+        pytest.skip("numpy unavailable; only the stdlib path exists")
+
+    rng = random.Random(2024)
+    max_abs = 0.0
+    for _ in range(12):
+        d = rng.choice([1, 2, 3, 8, 16])
+        n_p = rng.choice([5, 17, 64, 200, 256])
+        n_q = rng.choice([5, 17, 64, 200, 512])
+        a = [[rng.gauss(0.0, 1.0) for _ in range(d)] for _ in range(n_p)]
+        b = [[rng.gauss(0.3, 1.2) for _ in range(d)] for _ in range(n_q)]
+        k = rng.choice([8, 16, 32, 64])
+        s = rng.choice([0, 1, 7, 42])
+
+        original = traj_mod._HAVE_NUMPY
+        try:
+            traj_mod._HAVE_NUMPY = True
+            new_val, new_seeds = sliced_wasserstein2(a, b, n_projections=k, seed=s)
+            traj_mod._HAVE_NUMPY = False
+            old_val, old_seeds = sliced_wasserstein2(a, b, n_projections=k, seed=s)
+        finally:
+            traj_mod._HAVE_NUMPY = original
+
+        assert new_seeds == old_seeds  # identical projection seeds (persistence)
+        max_abs = max(max_abs, abs(new_val - old_val))
+
+    assert max_abs < 1e-6, f"numpy vs stdlib SW2 disagree by {max_abs}"
+
+
 def test_mmd_is_zero_for_identical_clouds():
     cloud = [[float(i), float(-i)] for i in range(20)]
     value = rbf_mmd2(cloud, cloud, seed=0)

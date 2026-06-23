@@ -1,0 +1,116 @@
+{
+  "provenance": "real GPU run RTX 4090; primary-cell first-order-influence outcome, not the registered full LOCI / full-grid",
+  "config": {
+    "entrypoint": "run_r0_experiment",
+    "primary_cell": "R0",
+    "closed_testing_node": "G0 (R0)",
+    "provenance": "real GPU run RTX 4090; primary-cell first-order-influence outcome, not the registered full LOCI / full-grid",
+    "description": "REAL server-runnable Gate-R0: does trajectory T add utility-predictive signal beyond phi_end + faithful NAIT(L)? Dual-ridge FWL cross-fit partial-R^2 + block-permutation p + cluster-BCa CI vs partial-R^2 floor.",
+    "design_refs": [
+      "REDESIGN_v5 \u00a73.2 (R0)",
+      "Eq.5-0..5-2p",
+      "Prop. P0",
+      "\u00a74.1 node G0"
+    ],
+    "config": "/root/autodl-tmp/neurotrace-it/configs/experiments/lattice_v5.yaml",
+    "model_path": "/root/autodl-tmp/models/Qwen2.5-1.5B-Instruct",
+    "dataset": "openai/gsm8k",
+    "parameters": {
+      "n_examples": 30,
+      "eval_size": 16,
+      "param_subset": "last_block",
+      "anchor_layers": 8,
+      "sketch_dim": 4096,
+      "max_new_tokens": 96,
+      "ridge_lambda": 1.0,
+      "cross_fit_folds": 10,
+      "n_permutations": 5000,
+      "bca_resamples": 2000,
+      "floor_partial": 0.01,
+      "alpha": 0.05,
+      "seed": 0
+    },
+    "outcome": "first-order TracIn/gradient-dot influence Y_i ~= <g_val, g_i> on the 'last_block' parameter subset, sketched to dim=4096, aggregated to LOCI clusters (sign-corrected: useful cluster -> positive Y)",
+    "control_block": [
+      "phi_end",
+      "NAIT(L) layer-sum + per-layer proj",
+      "C",
+      "1"
+    ],
+    "trajectory_block_T": "(D_l SW2^2, kappa_l curvature) over the |A| anchor layers",
+    "decision": "reject H0^{R0} (T adds signal) iff permutation p < alpha AND cluster-BCa-95% lower bound > floor_partial",
+    "modules_imported": [
+      "neurotrace_it.baselines.nait",
+      "neurotrace_it.baselines.nait_layerwise",
+      "neurotrace_it.trajectory",
+      "neurotrace_it.analysis.outcome_y",
+      "neurotrace_it.analysis.residualize",
+      "neurotrace_it.analysis.residual_test"
+    ],
+    "heavy_deps_lazy": [
+      "torch",
+      "transformers",
+      "datasets"
+    ],
+    "outputs": {
+      "r0_result": "runs/smoke.json"
+    }
+  },
+  "shapes": {
+    "phi_end": [
+      30,
+      24576
+    ],
+    "nait": [
+      30,
+      9
+    ],
+    "endpoint_plus_nait_penalized": 24585,
+    "control_Z": [
+      30,
+      24586
+    ],
+    "trajectory_T": [
+      30,
+      16
+    ]
+  },
+  "outcome_shape": [
+    30
+  ],
+  "n_clusters": 1,
+  "result": {
+    "partial_r2_T": -0.10509771614116725,
+    "delta_r2_overall": 0.0,
+    "permutation_p": 0.6470705858828234,
+    "n_permutations": 5000,
+    "n_folds": 10,
+    "fold_partial_r2": [
+      -0.11874813783961226,
+      -0.08616143166403939,
+      0.08145587774043911,
+      -0.09144729444272223,
+      -0.12647007911468247,
+      -0.2500402686853164,
+      -0.003245830420957274,
+      -0.16555235446477967,
+      -0.16685696851891513,
+      0.009099737170702463
+    ],
+    "bca_ci": {
+      "point": -0.10509771614116725,
+      "lower": -0.10509771614116725,
+      "upper": -0.10509771614116725,
+      "level": 0.95,
+      "n_boot": 2000
+    },
+    "floor_partial": 0.01,
+    "alpha": 0.05,
+    "decision": {
+      "perm_p_below_alpha": false,
+      "bca_lower_above_floor": false,
+      "reject_H0_R0": false
+    },
+    "verdict": "no evidence T adds signal beyond endpoints (fail to reject H0^{R0})"
+  }
+}

@@ -112,3 +112,344 @@ baselines:
     tuning_policy: validation_only_same_budget
     input_access: selected_layers_without_temporal_trajectory
     fairness: same_pool_same_budget_same_training_and_evaluator
+
+  # ===================================================================
+  # ARIS v6 LOCKED VERIFIED-OFFICIAL-REPO BASELINE SUITE (2024-2026)
+  # -------------------------------------------------------------------
+  # Added 2026-06-21 (ARIS v6). Eleven baselines, EACH WITH A CONFIRMED
+  # OFFICIAL CODE RELEASE (repo_verified: true), promoted for a top-venue
+  # fair comparison on the v6 confirmatory headline Qwen2.5-7B-Instruct.
+  # >= 8 of these are run from the OFFICIAL REPO (implementation_source:
+  # official_repo); the remaining ones are honest controls. They are
+  # DISTINCT from the base-paper reimplementation anchors above
+  # (endpoint_neuron_selection = NAIT, quality_score_selection =
+  # AlpaGasus), which stay disclosed faithful reimplementations and are
+  # NOT counted in the >= 8 official-repo set.
+  #
+  # SHARED FAIRNESS CONTRACT for every entry in this block (see
+  # docs/baseline_contract.md, BASELINES.md "Fairness protocol",
+  # and REDESIGN_v6 §C). Each baseline:
+  #   - selects under OUR pinned selection budget B (lattice_v4.yaml),
+  #   - on the v6 headline model Qwen/Qwen2.5-7B-Instruct (revision main),
+  #   - over OUR three candidate pools (MetaMathQA / glaive-code-assistant
+  #     / HotpotQA-distractor), example-disjoint via the locked 3-pool
+  #     firewall,
+  #   - then trains with OUR IDENTICAL LoRA pipeline (matched rank, steps,
+  #     tokens, optimizer, seeds 0..19) and is scored by OUR IDENTICAL
+  #     eval pipeline (target + MMLU retention + TruthfulQA/FActScore
+  #     hallucination + cost ledger),
+  #   - and the decision is the pre-registered R0/R1/R2 closed-testing
+  #     gate (G2t IUT over the comparator set). Only the SELECTION (or, for
+  #     the routing controls, the per-layer allocation) is the baseline's
+  #     own; everything downstream is held identical.
+  # server.authorized stays false: NO baseline is run yet; this records
+  # provenance + the adaptation contract only. No result is claimed.
+  # ===================================================================
+
+  less:
+    display_name: LESS (gradient/influence selection)
+    family: influence
+    required: true
+    role: must_beat
+    paper_url: https://arxiv.org/abs/2402.04333
+    venue: ICML 2024
+    official_repo: https://github.com/princeton-nlp/LESS
+    license: MIT
+    repo_verified: true
+    implementation_source: official_repo
+    citation_status: verified_real_2026-06-21
+    tuning_policy: validation_only_same_budget
+    input_access: low_rank_gradient_influence_scores
+    # Fairness adaptation: run the official LESS optimizer-aware low-rank
+    # gradient-similarity influence selection to score OUR candidate pool
+    # against a small validation target, take its top-B under OUR budget,
+    # then hand those IDs to OUR identical Qwen2.5-7B LoRA pipeline. The
+    # LESS warm-up/projection uses the SAME Qwen2.5-7B backbone (not its
+    # paper LLaMA), so the gradient features are backbone-matched.
+    fairness_adaptation: official_less_scores_our_pool_topB_then_our_lora_pipeline
+    fairness: same_pool_same_budget_same_training_and_evaluator
+    # Note: this is the SAME method as the disclosed influence anchor
+    # influence_gradient_selection above; v6 upgrades it from "faithful
+    # reimpl" to the OFFICIAL MIT-licensed repo and counts it in the >= 8.
+
+  deita:
+    display_name: DEITA (quality x complexity x diversity)
+    family: data_quality
+    required: true
+    role: must_beat
+    paper_url: https://arxiv.org/abs/2312.15685
+    venue: ICLR 2024
+    official_repo: https://github.com/hkust-nlp/deita
+    license: Apache-2.0
+    repo_verified: true
+    implementation_source: official_repo
+    citation_status: verified_real_2026-06-21
+    tuning_policy: validation_only_same_budget
+    input_access: quality_complexity_diversity_scores
+    # Fairness adaptation: run DEITA's official complexity + quality
+    # scorers and its diversity-aware (Repr Filter) greedy selection over
+    # OUR pool to pick top-B; train with OUR identical Qwen2.5-7B LoRA
+    # pipeline. DEITA's released scorers are used as-is; only the candidate
+    # pool, budget B, and training/eval are swapped to ours.
+    fairness_adaptation: official_deita_scorers_and_repr_filter_select_B_then_our_lora_pipeline
+    fairness: same_pool_same_budget_same_training_and_evaluator
+
+  selectit:
+    display_name: SelectIT (model-intrinsic uncertainty)
+    family: uncertainty
+    required: true
+    role: must_beat
+    paper_url: https://arxiv.org/abs/2402.16705
+    venue: EMNLP 2024
+    official_repo: https://github.com/Blue-Raincoat/SelectIT
+    license: Apache-2.0
+    repo_verified: true
+    implementation_source: official_repo
+    citation_status: verified_real_2026-06-21
+    tuning_policy: validation_only_same_budget
+    input_access: token_sentence_model_level_self_reflection_uncertainty
+    # Fairness adaptation: run SelectIT's official token/sentence/model
+    # -level self-reflection uncertainty scoring USING OUR headline
+    # Qwen2.5-7B-Instruct as the rater model (model-intrinsic, no external
+    # judge), keep its top-B over OUR pool, train with OUR identical LoRA
+    # pipeline.
+    fairness_adaptation: official_selectit_uncertainty_with_qwen2p5_7b_rater_topB_then_our_lora_pipeline
+    fairness: same_pool_same_budget_same_training_and_evaluator
+
+  datainf:
+    display_name: DataInf (closed-form LoRA influence)
+    family: influence
+    required: true
+    role: must_beat
+    paper_url: https://arxiv.org/abs/2310.00902
+    venue: ICLR 2024
+    official_repo: https://github.com/ykwon0407/DataInf
+    license: MIT
+    repo_verified: true
+    implementation_source: official_repo
+    citation_status: verified_real_2026-06-21
+    tuning_policy: validation_only_same_budget
+    input_access: closed_form_lora_influence_scores
+    # Fairness adaptation: compute DataInf's closed-form LoRA influence on
+    # OUR Qwen2.5-7B LoRA gradients against the validation target, rank OUR
+    # pool, keep top-B, train with OUR identical pipeline. The closed-form
+    # influence is evaluated on the SAME LoRA parameterization used for
+    # training, so the influence estimate is pipeline-matched.
+    fairness_adaptation: official_datainf_closed_form_lora_influence_topB_then_our_lora_pipeline
+    fairness: same_pool_same_budget_same_training_and_evaluator
+
+  nuggets:
+    display_name: Nuggets (one-shot in-context info gain)
+    family: in_context_gain
+    required: true
+    role: must_beat
+    paper_url: https://arxiv.org/abs/2312.10302
+    venue: ICLR 2024
+    official_repo: https://github.com/pldlgb/nuggets
+    license: not_stated_in_repo
+    repo_verified: true
+    implementation_source: official_repo
+    citation_status: verified_real_2026-06-21
+    tuning_policy: validation_only_same_budget
+    input_access: one_shot_in_context_golden_score
+    # Fairness adaptation: run Nuggets' official one-shot in-context
+    # "golden score" (zero-shot vs one-shot perplexity gain) USING OUR
+    # Qwen2.5-7B-Instruct as the scoring LM over OUR pool, keep top-B,
+    # train with OUR identical LoRA pipeline. License is not declared in
+    # the upstream repo (repo_verified true, license unresolved): only the
+    # documented scoring procedure is reused on our own backbone; if an
+    # upstream license is later declared, pin it here before any release.
+    fairness_adaptation: official_nuggets_golden_score_with_qwen2p5_7b_topB_then_our_lora_pipeline
+    fairness: same_pool_same_budget_same_training_and_evaluator
+
+  mig:
+    display_name: MIG (max information gain in semantic space)
+    family: information_gain
+    required: true
+    role: must_beat
+    paper_url: https://arxiv.org/abs/2504.13835
+    venue: ACL 2025 Findings
+    official_repo: https://github.com/yichengchen24/MIG
+    license: Apache-2.0
+    repo_verified: true
+    implementation_source: official_repo
+    citation_status: verified_real_2026-06-21
+    tuning_policy: validation_only_same_budget
+    input_access: semantic_graph_information_gain
+    # Fairness adaptation: run MIG's official maximum-information-gain
+    # selection over a semantic label graph built from OUR pool, keep the
+    # selected B examples, train with OUR identical Qwen2.5-7B LoRA
+    # pipeline. The semantic-space graph is rebuilt on our three pools.
+    fairness_adaptation: official_mig_information_gain_select_B_then_our_lora_pipeline
+    fairness: same_pool_same_budget_same_training_and_evaluator
+
+  s2l:
+    display_name: S2L / SmallToLarge (training-trajectory clustering)
+    family: training_trajectory
+    required: true
+    role: must_beat
+    # Closest trajectory competitor: clusters SMALL-MODEL training-loss
+    # trajectories, then samples a balanced coreset. This is the nearest
+    # neighbour to LATTICE-R's trajectory-as-distribution thesis and is the
+    # most important comparator to separate from.
+    paper_url: https://arxiv.org/abs/2403.07384
+    venue: NeurIPS 2024
+    official_repo: https://github.com/BigML-CS-UCLA/S2L
+    license: MIT
+    repo_verified: true
+    implementation_source: official_repo
+    citation_status: verified_real_2026-06-21
+    tuning_policy: validation_only_same_budget
+    input_access: small_model_training_loss_trajectories
+    # Fairness adaptation: run S2L's official small-model training-loss
+    # -trajectory clustering + balanced sampling to pick B examples from
+    # OUR pool (the proxy small model is Qwen2.5-1.5B-Instruct, OUR
+    # secondary backbone, so the proxy is in-family), then train the
+    # selected set with OUR identical Qwen2.5-7B LoRA pipeline. S2L clusters
+    # LOSS trajectories (scalar over steps); LATTICE-R uses full per-layer
+    # activation-trajectory distributions (SW2/curvature) -- the contrast
+    # this baseline is designed to expose.
+    fairness_adaptation: official_s2l_loss_trajectory_cluster_on_qwen1p5b_proxy_select_B_then_our_7b_lora_pipeline
+    fairness: same_pool_same_budget_same_training_and_evaluator
+
+  cherry_ifd:
+    display_name: Cherry / IFD (Instruction-Following Difficulty)
+    family: data_quality
+    required: true
+    role: must_beat
+    paper_url: https://arxiv.org/abs/2308.12032
+    venue: NAACL 2024
+    official_repo: https://github.com/tianyi-lab/Cherry_LLM
+    license: not_stated_in_repo
+    repo_verified: true
+    implementation_source: official_repo
+    citation_status: verified_real_2026-06-21
+    tuning_policy: validation_only_same_budget
+    input_access: instruction_following_difficulty_score
+    # Fairness adaptation: run the official Cherry IFD score (conditioned
+    # vs unconditioned response perplexity ratio) USING OUR Qwen2.5-7B
+    # -Instruct, keep its top-B over OUR pool, train with OUR identical
+    # LoRA pipeline. Upstream repo license not declared (repo_verified
+    # true, license unresolved): documented IFD scoring is reused on our
+    # backbone; pin an upstream license here if later declared.
+    fairness_adaptation: official_cherry_ifd_with_qwen2p5_7b_topB_then_our_lora_pipeline
+    fairness: same_pool_same_budget_same_training_and_evaluator
+
+  tagcos:
+    display_name: TAGCOS (gradient-clustered coreset)
+    family: coreset
+    required: true
+    role: must_beat
+    paper_url: https://arxiv.org/abs/2407.15235
+    venue: NAACL 2025
+    official_repo: https://github.com/2003pro/TAGCOS
+    license: not_stated_in_repo
+    repo_verified: true
+    implementation_source: official_repo
+    citation_status: verified_real_2026-06-21
+    tuning_policy: validation_only_same_budget
+    input_access: per_sample_gradient_clusters
+    # Fairness adaptation: run TAGCOS's official per-sample gradient
+    # representation + clustering + greedy coreset selection over OUR pool
+    # using OUR Qwen2.5-7B LoRA gradients, keep B, train with OUR identical
+    # pipeline. This is the VERIFIED text-domain gradient-coreset comparator
+    # that the dropped MAGIC/VLM citation could not be; it supersedes
+    # diversity_coreset as the citable text coreset must-beat. Upstream repo
+    # license not declared (repo_verified true, license unresolved).
+    fairness_adaptation: official_tagcos_gradient_coreset_on_qwen_grads_select_B_then_our_lora_pipeline
+    fairness: same_pool_same_budget_same_training_and_evaluator
+
+  neft:
+    display_name: NeFT (neuron-level fine-tuning)
+    family: routing_control
+    required: true
+    role: control
+    # CONTROL, not a selection must-beat: NeFT tunes selected neurons
+    # task-globally. In v6 it is an R1 routing-arm control (selects WHICH
+    # parameters to adapt, not which data), projected to the same integer
+    # capacity grid as every other routing arm.
+    paper_url: https://arxiv.org/abs/2403.11621
+    venue: COLING 2025
+    official_repo: https://github.com/NLP2CT/NeFT
+    license: not_stated_in_repo
+    repo_verified: true
+    implementation_source: official_repo
+    citation_status: verified_real_2026-06-21
+    tuning_policy: validation_only_same_budget
+    input_access: neuron_level_parameter_selection
+    # Fairness adaptation: run NeFT's official neuron-selection to choose
+    # the adapted parameter set on OUR Qwen2.5-7B, projected onto OUR fixed
+    # capacity grid (R_tot/r_max) so it trains the SAME number of effective
+    # parameters as every R1 arm; data selection held identical across arms.
+    fairness_adaptation: official_neft_neuron_select_projected_to_our_capacity_grid_as_R1_arm
+    fairness: same_pool_same_budget_same_training_and_evaluator
+
+  adalora:
+    display_name: AdaLoRA (adaptive rank budget)
+    family: routing_control
+    required: true
+    role: control
+    # CONTROL: adaptive rank allocation DURING training by SVD importance.
+    # In v6 it is an R1 routing-arm control, projected to the same integer
+    # capacity grid (R_tot over A, r_0 elsewhere) as every other arm so
+    # that "routing on psi beats adaptive rank allocation" is measured.
+    paper_url: https://arxiv.org/abs/2303.10512
+    venue: ICLR 2023
+    official_repo: https://github.com/QingruZhang/AdaLoRA
+    license: MIT
+    repo_verified: true
+    implementation_source: official_repo
+    citation_status: verified_real_2026-06-21
+    tuning_policy: validation_only_same_budget
+    input_access: svd_importance_adaptive_rank
+    # Fairness adaptation: run AdaLoRA's official SVD-importance adaptive
+    # rank reallocation under OUR matched total budget R_tot on OUR
+    # Qwen2.5-7B (warm-up W_ada=200 steps, fixed seed), as an R1 routing
+    # arm; data selection held identical across arms.
+    fairness_adaptation: official_adalora_adaptive_rank_under_matched_R_tot_as_R1_arm
+    fairness: same_pool_same_budget_same_training_and_evaluator
+
+# ===================================================================
+# v6 baseline-suite accounting (provenance summary; not a result)
+# ===================================================================
+v6_baseline_contract:
+  added: 2026-06-21
+  headline_model: Qwen/Qwen2.5-7B-Instruct   # confirmatory; revision main
+  robustness_model: Qwen/Qwen2.5-1.5B-Instruct   # smoke/robustness row only
+  verified_official_repo_baselines:
+    - less
+    - deita
+    - selectit
+    - datainf
+    - nuggets
+    - mig
+    - s2l
+    - cherry_ifd
+    - tagcos
+    - neft
+    - adalora
+  verified_official_repo_count: 11   # >= 8 official-repo contract satisfied
+  must_beat_selection_subset:        # the 8 selection comparators run from official code
+    - less
+    - deita
+    - selectit
+    - datainf
+    - nuggets
+    - mig
+    - s2l
+    - cherry_ifd
+    - tagcos
+  routing_arm_controls:              # official-code routing controls (not selection must-beat)
+    - neft
+    - adalora
+  disclosed_reimplementation_anchors:  # base-paper anchors, NOT counted in the >= 8
+    - name: NAIT
+      registry_key: endpoint_neuron_selection
+      reason: ICLR 2026, no public repo; faithful reimpl of endpoint neuron-similarity (Eq.1), high confidence
+      role: must_beat_control
+    - name: AlpaGasus
+      registry_key: quality_score_selection
+      reason: ICLR 2024; GitHub is a project webpage only, no runnable code; faithful reimpl of the LLM-as-judge scoring
+      role: must_beat
+  deciding_gate: closed_testing_R0_R1_R2_G2t_IUT_over_comparator_set
+  server_authorized: false   # nothing runs; provenance + adaptation contract only

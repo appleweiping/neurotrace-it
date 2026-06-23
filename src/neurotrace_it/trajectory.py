@@ -38,6 +38,22 @@ import random
 from dataclasses import dataclass, field
 from typing import Mapping, Sequence
 
+# Optional numpy acceleration for the SW2 projection hot path (see
+# ``sliced_wasserstein2``). NUMERICALLY EQUIVALENT to the pure-Python path
+# (machine-epsilon agreement, verified by the trajectory unit tests + a
+# |old-new|<1e-6 tolerance check): the RNG-driven projection directions and the
+# per-projection seeds are computed IDENTICALLY; numpy only replaces the inner
+# dot-product / sort / sum (a float64 matmul vs ``math.fsum``, differing only in
+# summation order). If numpy is unavailable the exact stdlib path is used, so the
+# module stays import-safe and build-now/run-later. No model load, no server call.
+try:  # pragma: no cover - exercised both ways by the equivalence test
+    import numpy as _np
+
+    _HAVE_NUMPY = True
+except Exception:  # noqa: BLE001
+    _np = None
+    _HAVE_NUMPY = False
+
 # h_{l,s,t} in R^d.  An example's activations are indexed [layer][step][token].
 Vector = Sequence[float]
 StepCloud = Sequence[Vector]          # tokens at one (layer, step)
@@ -169,6 +185,43 @@ def _w2_1d_squared(proj_p: list[float], proj_q: list[float]) -> float:
     return total / grid
 
 
+def _w2_1d_squared_np(proj_p: "object", proj_q: "object") -> float:
+    """numpy 1-D ``W2^2`` -- the EXACT vectorization of :func:`_w2_1d_squared`.
+
+    ``proj_p`` / ``proj_q`` are 1-D numpy arrays (the projected samples). This
+    replicates the stdlib estimator term-for-term: equal sizes -> mean squared gap
+    of the sorted samples; unequal sizes -> mean squared gap on the SAME shared
+    quantile grid ``(i+0.5)/grid`` with linear interpolation between order
+    statistics. Only the summation order differs from the stdlib path (numpy
+    reduction vs ``math.fsum``), giving machine-epsilon agreement.
+    """
+
+    sorted_p = _np.sort(proj_p)
+    sorted_q = _np.sort(proj_q)
+    n_p = sorted_p.shape[0]
+    n_q = sorted_q.shape[0]
+    if n_p == 0 or n_q == 0:
+        raise ValueError("cannot compute W2 against an empty projected sample")
+    if n_p == n_q:
+        diff = sorted_p - sorted_q
+        return float(_np.sum(diff * diff) / n_p)
+    grid = max(n_p, n_q)
+    levels = (_np.arange(grid) + 0.5) / grid
+
+    def quantile(sorted_values: "object", level: "object") -> "object":
+        m = sorted_values.shape[0]
+        if m == 1:
+            return _np.full(level.shape, float(sorted_values[0]))
+        position = level * (m - 1)
+        low = _np.floor(position).astype(int)
+        high = _np.minimum(low + 1, m - 1)
+        frac = position - low
+        return sorted_values[low] * (1.0 - frac) + sorted_values[high] * frac
+
+    gap = quantile(sorted_p, levels) - quantile(sorted_q, levels)
+    return float(_np.sum(gap * gap) / grid)
+
+
 def sliced_wasserstein2(
     cloud_p: Sequence[Vector],
     cloud_q: Sequence[Vector],
@@ -208,13 +261,25 @@ def sliced_wasserstein2(
 
     projection_seeds: list[int] = []
     accumulated = 0.0
+    # numpy fast path: pre-stack the (already subsampled) clouds ONCE; the
+    # per-projection direction + seed are computed identically to the stdlib path
+    # (same _unit_direction RNG draw, same proj_seed), only the dot-product / sort
+    # / integrate is vectorized. Equivalence is machine-epsilon (test-checked).
+    use_numpy = _HAVE_NUMPY and dim_p > 0
+    if use_numpy:
+        mat_p = _np.asarray(sample_p, dtype=_np.float64)
+        mat_q = _np.asarray(sample_q, dtype=_np.float64)
     for index in range(n_projections):
         proj_seed = (seed * 1_000_003 + index) & 0x7FFF_FFFF
         projection_seeds.append(proj_seed)
         direction = _unit_direction(dim_p, random.Random(proj_seed))
-        proj_p = [math.fsum(d * x for d, x in zip(direction, point)) for point in sample_p]
-        proj_q = [math.fsum(d * x for d, x in zip(direction, point)) for point in sample_q]
-        accumulated += _w2_1d_squared(proj_p, proj_q)
+        if use_numpy:
+            dvec = _np.asarray(direction, dtype=_np.float64)
+            accumulated += _w2_1d_squared_np(mat_p @ dvec, mat_q @ dvec)
+        else:
+            proj_p = [math.fsum(d * x for d, x in zip(direction, point)) for point in sample_p]
+            proj_q = [math.fsum(d * x for d, x in zip(direction, point)) for point in sample_q]
+            accumulated += _w2_1d_squared(proj_p, proj_q)
     return accumulated / n_projections, tuple(projection_seeds)
 
 

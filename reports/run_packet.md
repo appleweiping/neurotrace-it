@@ -364,3 +364,67 @@ only when the training/extraction body replaces each guarded stub at authorizati
 *Provenance:* design-only Stage-1 Registered Report. No experiment, training, extraction,
 or model load is run by this packet. `server.authorized: false` throughout. Zero
 fabricated numbers.
+
+---
+
+## 8. ARIS v6 baseline-suite addendum (what needs updating for the baseline runs)
+
+**Appended 2026-06-21 (ARIS v6).** This section notes — does NOT yet implement —
+what a later authorized run must add for the locked baseline comparison. Source of
+truth: `configs/baselines/baseline_registry.yaml` (`v6_baseline_contract`),
+`BASELINES.md`, and `docs/redesign/REDESIGN_v6.md` (§B/§C/§E). `server.authorized`
+stays **false**; no baseline runs now.
+
+### 8.1 Per-baseline run approach (official repo vs reimpl)
+
+Each baseline contributes **one number per pool** to the Gate-R2 G2t IUT
+comparator set. For every baseline the pipeline is: *its* selection over OUR pool
+under budget `B` ⇒ OUR identical Qwen2.5-7B LoRA training ⇒ OUR identical eval.
+Only the selection step is the baseline's own.
+
+| Baseline | Run via | What is adapted to our task |
+| --- | --- | --- |
+| LESS | official repo (MIT) | gradient warm-up/projection on OUR Qwen2.5-7B; score OUR pool; top-B |
+| DEITA | official repo (Apache-2.0) | released complexity+quality scorers + Repr Filter over OUR pool; top-B |
+| SelectIT | official repo (Apache-2.0) | self-reflection uncertainty with OUR Qwen2.5-7B as rater; top-B |
+| DataInf | official repo (MIT) | closed-form LoRA influence on OUR Qwen2.5-7B LoRA grads; top-B |
+| Nuggets | official repo (license n/s) | one-shot golden score with OUR Qwen2.5-7B; top-B |
+| MIG | official repo (Apache-2.0) | info-gain over a semantic graph rebuilt on OUR pools; select B |
+| S2L | official repo (MIT) | loss-trajectory clustering on OUR Qwen2.5-1.5B proxy; select B; train at 7B |
+| Cherry/IFD | official repo (license n/s) | IFD score with OUR Qwen2.5-7B; top-B |
+| TAGCOS | official repo (license n/s) | gradient coreset on OUR Qwen2.5-7B LoRA grads; select B |
+| NeFT | official repo (license n/s) | **R1 routing arm**: neuron-select projected to OUR capacity grid `R_tot`/`r_max` |
+| AdaLoRA | official repo (MIT) | **R1 routing arm**: SVD adaptive rank under OUR matched `R_tot`, `W_ada=200` |
+| NAIT | faithful reimpl (no repo) | endpoint neuron-similarity Eq. 1; already an R0/G2t control |
+| AlpaGasus | faithful reimpl (webpage only) | LLM-as-judge quality scoring under project (MIT) license |
+
+Integration notes for the later run:
+- The nine selection comparators (LESS…TAGCOS) join the existing G2t comparator
+  set; the closed-test G2t IUT requires LATTICE-R to beat **every** member by
+  `δ_target` (no weakest-link shortcut). The two routing controls (NeFT, AdaLoRA)
+  join the **R1** routing-arm IUT, projected to the shared capacity grid.
+- Vendored/official baseline code is run in its own isolated env; only the
+  **selected example IDs + hash** cross back into OUR pipeline (firewall-safe),
+  exactly like the existing selectors. No baseline reads `P_dep` outcomes.
+- Backbone-matching is mandatory: baselines that need a scorer/proxy model use a
+  Qwen2.5 backbone (7B raters; 1.5B for S2L), never the baseline's paper base.
+
+### 8.2 Single-GPU kill-gate-first order (one RTX-4090, serial)
+
+Run order on the single 4090 (stop on first hard gate failure; see REDESIGN_v6 §E):
+
+1. **NAIT(`L`) + signatures + R0** (cheap, selection-side). R0 fail ⇒
+   `stop_main_novelty_claim`; **no training compute spent on baselines or arms.**
+2. **R1 six routing arms** (incl. AdaLoRA/NeFT controls), serial, 20 seeds,
+   checkpoint per `(arm, seed)`. R1 fail ⇒ `drop_routing_keep_selection`.
+3. **Baseline selection + matched LoRA training**, serial, reusing the same 4090;
+   cheapest-scoring selectors first (IFD/Nuggets perplexity) so a dominating
+   result surfaces early.
+4. **R2 compute-matched comparison + closed-testing decision** last; realized
+   FLOPs/wall-clock **measured** by `cost_model.compute_match_ledger`, never
+   predicted. `> 2.0×` extraction-parity ⇒ high-cost-analysis, no deployment claim.
+
+This fits the frozen envelope (`first_gate_budget.yaml`,
+`matched_lora_training_gpu_hours: 24`, `buffer_percent: 30`) on one device by
+spending the killing-cheapest gates before the expensive arms. Nothing runs until
+`server.authorized: true` AND `--i-have-authorization`.

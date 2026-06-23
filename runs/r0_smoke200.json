@@ -1,0 +1,176 @@
+{
+  "provenance": "real GPU run RTX 4090; primary-cell first-order-influence outcome, not the registered full LOCI / full-grid",
+  "config": {
+    "entrypoint": "run_r0_experiment",
+    "primary_cell": "R0",
+    "closed_testing_node": "G0 (R0)",
+    "provenance": "real GPU run RTX 4090; primary-cell first-order-influence outcome, not the registered full LOCI / full-grid",
+    "description": "REAL server-runnable Gate-R0: does trajectory T add utility-predictive signal beyond phi_end + faithful NAIT(L)? Dual-ridge FWL cross-fit partial-R^2 + block-permutation p + cluster-BCa CI vs partial-R^2 floor.",
+    "design_refs": [
+      "REDESIGN_v5 \u00a73.2 (R0)",
+      "Eq.5-0..5-2p",
+      "Prop. P0",
+      "\u00a74.1 node G0"
+    ],
+    "config": "/root/autodl-tmp/neurotrace-it/configs/experiments/lattice_v5.yaml",
+    "model_path": "/root/autodl-tmp/models/Qwen2.5-1.5B-Instruct",
+    "dataset": "openai/gsm8k",
+    "parameters": {
+      "n_examples": 200,
+      "eval_size": 128,
+      "param_subset": "last_block",
+      "anchor_layers": 8,
+      "sketch_dim": 4096,
+      "max_new_tokens": 96,
+      "ridge_lambda_placeholder": 1.0,
+      "ridge_lambda_cv_enabled": true,
+      "ridge_lambda_cv_grid": "[0.01, 0.1, 1.0, 10.0, 100.0] * sigma^2_Phi (REDESIGN_v4 \u00a74.2; 5-fold CV)",
+      "cross_fit_folds": 10,
+      "n_permutations": 5000,
+      "bca_resamples": 2000,
+      "floor_partial": 0.01,
+      "alpha": 0.05,
+      "seed": 0
+    },
+    "outcome": "first-order TracIn/gradient-dot influence Y_i ~= <g_val, g_i> on the 'last_block' parameter subset, sketched to dim=4096, aggregated to LOCI clusters (sign-corrected: useful cluster -> positive Y)",
+    "control_block": [
+      "phi_end",
+      "NAIT(L) layer-sum + per-layer proj",
+      "C",
+      "1"
+    ],
+    "trajectory_block_T": "(D_l SW2^2, kappa_l curvature) over the |A| anchor layers",
+    "decision": "reject H0^{R0} (T adds signal) iff permutation p < alpha AND cluster-BCa-95% lower bound > floor_partial",
+    "modules_imported": [
+      "neurotrace_it.baselines.nait",
+      "neurotrace_it.baselines.nait_layerwise",
+      "neurotrace_it.trajectory",
+      "neurotrace_it.analysis.outcome_y",
+      "neurotrace_it.analysis.residualize",
+      "neurotrace_it.analysis.residual_test"
+    ],
+    "heavy_deps_lazy": [
+      "torch",
+      "transformers",
+      "datasets"
+    ],
+    "outputs": {
+      "r0_result": "runs/r0_smoke200.json"
+    }
+  },
+  "shapes": {
+    "phi_end": [
+      200,
+      24576
+    ],
+    "nait": [
+      200,
+      9
+    ],
+    "endpoint_plus_nait_penalized": 24585,
+    "control_Z": [
+      200,
+      24586
+    ],
+    "trajectory_T": [
+      200,
+      16
+    ]
+  },
+  "outcome_shape": [
+    200
+  ],
+  "n_clusters": 1,
+  "diagnostics": {
+    "n_clusters": 1,
+    "cluster_sizes": [
+      200
+    ],
+    "min_cluster_size": 200,
+    "max_cluster_size": 200,
+    "clusters_sufficient_ge_8": false,
+    "n_rows": 200,
+    "n_distinct_Y": 1,
+    "Y_degenerate_near_constant": true,
+    "endpoint_control_heldout_r2_on_Y": null,
+    "Y_uninformative_controls_predict_nothing": false,
+    "t_residual_fraction": 0.0006356404242887843,
+    "T_redundant_collinear_with_controls": true,
+    "fold_partial_r2_spread": {
+      "min": -0.08359313556939947,
+      "max": 0.0014744471642713403,
+      "std": 0.025170177416611556,
+      "n_folds": 10
+    },
+    "bca_acceleration": null,
+    "bca_bias_correction": null,
+    "accel_estimable_g_ge_min": false,
+    "MIN_CLUSTERS_FOR_ACCEL": 4,
+    "bca_degenerate_point": true,
+    "interpretation": "A null is REAL only if: n_clusters >= 8 (else clustering artifact); n_distinct_Y large; endpoint_control_heldout_r2_on_Y > ~0 (Y is predictable, so 'T adds nothing' is informative); and t_residual_fraction > ~0 (T is not collinear with the controls). Otherwise the null is DEGENERATE, not a scientific finding."
+  },
+  "result": {
+    "partial_r2_T": -0.04034505841253745,
+    "delta_r2_overall": 0.0,
+    "permutation_p": 0.9054189162167566,
+    "n_permutations": 5000,
+    "n_folds": 10,
+    "fold_partial_r2": [
+      -0.08359313556939947,
+      -0.03499872303385923,
+      -0.06443474182662744,
+      -0.04812608753250493,
+      -0.045691393791215666,
+      -0.03279171235681432,
+      0.0014744471642713403,
+      -0.04646826091478904,
+      -0.00760266488700109,
+      -0.009488009841472711
+    ],
+    "ridge_lambda_used": 202.27084125426776,
+    "ridge_lambda_cv": {
+      "selected_lambda": 202.27084125426776,
+      "selected_multiplier": 100.0,
+      "sigma2_phi": 2.0227084125426775,
+      "grid_multipliers": [
+        0.01,
+        0.1,
+        1.0,
+        10.0,
+        100.0
+      ],
+      "grid_lambdas": [
+        0.020227084125426776,
+        0.20227084125426775,
+        2.0227084125426775,
+        20.227084125426774,
+        202.27084125426776
+      ],
+      "per_lambda_criterion": [
+        7478.176128140063,
+        7477.924650569994,
+        7475.414613908833,
+        7450.779595546266,
+        7243.76020725501
+      ],
+      "criterion": "held_out_control_fit_residual_ss_5fold",
+      "n_cv_folds": 5,
+      "grid_spec": "REDESIGN_v4 \u00a74.2: {1e-2,1e-1,1,10,100} * sigma^2_Phi"
+    },
+    "bca_ci": {
+      "point": -0.04034505841253745,
+      "lower": -0.04034505841253745,
+      "upper": -0.04034505841253745,
+      "level": 0.95,
+      "n_boot": 2000
+    },
+    "floor_partial": 0.01,
+    "alpha": 0.05,
+    "decision": {
+      "perm_p_below_alpha": false,
+      "bca_lower_above_floor": false,
+      "reject_H0_R0": false
+    },
+    "verdict": "no evidence T adds signal beyond endpoints (fail to reject H0^{R0})"
+  }
+}
